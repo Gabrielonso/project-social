@@ -16,6 +16,10 @@ export const ormConfig: DataSourceOptions = {
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  ssl: {
+    rejectUnauthorized: true,
+    ca: process.env.DB_SSL,
+  },
   synchronize: process.env.DB_SYNCHRONIZATION === 'true',
   logging: process.env.DB_LOGGING === 'true',
   entities: [User, Wallet, Submission, Skill, Opportunity, Client, Faq],
