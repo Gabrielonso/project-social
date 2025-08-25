@@ -1,0 +1,7 @@
+export enum Queues {
+  EMAIL = 'EMAIL',
+  PAYMENT = 'PAYMENT',
+  PAYIN = 'PAYIN',
+  PAYOUT = 'PAYOUT',
+  CURRENCY_CONVERSION = 'CURRENCY_CONVERSION',
+}
