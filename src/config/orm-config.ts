@@ -1,13 +1,14 @@
 import { DataSourceOptions } from 'typeorm';
 import * as dotenv from 'dotenv';
 
-import { User } from '../user/entity/user.entity';
-import Wallet from '../wallet/entity/wallet.entity';
-import { Submission } from 'src/submission/entity/submission.entity';
-import { Skill } from 'src/skills/entity/skill.entity';
-import { Opportunity } from 'src/opportunity/entity/opportunity.entity';
-import { Client } from 'src/client/entity/client.entity';
-import { Faq } from 'src/faq/entity/faq.entity';
+import { User } from '../modules/user/entity/user.entity';
+import { Post } from 'src/modules/posts/entities/post.entity';
+import { Media } from 'src/modules/media/entities/media.entity';
+import { PostMedia } from 'src/modules/posts/entities/post-media.entity';
+import { Ad } from 'src/modules/ads/entities/ads.entity';
+import { AdMedia } from 'src/modules/ads/entities/ads-media.entity';
+import { Like } from 'src/modules/engagements/entities/like.entity';
+import { Share } from 'src/modules/engagements/entities/share.entity';
 dotenv.config();
 export const ormConfig: DataSourceOptions = {
   type: 'postgres',
@@ -16,12 +17,15 @@ export const ormConfig: DataSourceOptions = {
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: true,
-    ca: process.env.DB_SSL,
-  },
+  ssl:
+    process.env.NODE_ENV === 'development'
+      ? false
+      : {
+          rejectUnauthorized: true,
+          ca: process.env.DB_SSL,
+        },
   synchronize: process.env.DB_SYNCHRONIZATION === 'true',
   logging: process.env.DB_LOGGING === 'true',
-  entities: [User, Wallet, Submission, Skill, Opportunity, Client, Faq],
+  entities: [User, Post, Media, PostMedia, Ad, AdMedia, Like, Share],
   migrations: [],
 };
