@@ -9,6 +9,8 @@ import {
 
 @Entity('comments')
 @Index(['entity', 'entityId'])
+@Index(['parentId'])
+@Index(['userId'])
 export class Comment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -26,7 +28,25 @@ export class Comment {
   content: string;
 
   @Column({ nullable: true, name: 'parent_id' })
-  parentId?: string; // replies
+  parentId?: string;
+
+  @Column({ name: 'reply_to_user_id', nullable: true })
+  replyToUserId?: string;
+
+  @Column({ name: 'reply_to_comment_id', nullable: true })
+  replyToCommentId?: string;
+
+  @Column({ name: 'reply_count', default: 0 })
+  replyCount: number;
+
+  @Column({ name: 'is_deleted', default: false })
+  isDeleted: boolean;
+
+  @Column({ name: 'deleted_at', nullable: true })
+  deletedAt?: Date;
+
+  @Column({ name: 'deleted_by', nullable: true })
+  deletedBy?: string; // admin or userId
 
   @CreateDateColumn({ name: 'create_at' })
   createdAt: Date;

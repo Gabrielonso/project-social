@@ -20,7 +20,7 @@ export class Share {
   entityId: string;
 
   @Column({ name: 'user_id' })
-  user: string;
+  userId: string;
 
   @Column({ name: 'share_type', default: 'internal' })
   shareType: 'internal' | 'external';

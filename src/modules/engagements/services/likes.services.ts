@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Like } from '../entities/like.entity';
@@ -17,6 +17,7 @@ export class LikesService {
 
   async toggleLike(entity: FeedType, entityId: string, userId: string) {
     return this.dataSource.transaction(async (manager) => {
+      await this.validateFeedEntity(manager, entity, entityId);
       const existing = await manager.findOne(Like, {
         where: { entity, entityId, userId },
       });
@@ -68,6 +69,26 @@ export class LikesService {
 
     if (entity === FeedType.AD) {
       return manager.decrement(Ad, { id: entityId }, 'likeCount', 1);
+    }
+  }
+
+  private async validateFeedEntity(
+    manager: EntityManager,
+    entity: FeedType,
+    entityId: string,
+  ) {
+    if (entity === FeedType.POST) {
+      const post = await manager.findOne(Post, { where: { id: entityId } });
+      if (!post) {
+        throw new NotFoundException('Post not found');
+      }
+    }
+
+    if (entity === FeedType.AD) {
+      const ad = await manager.findOne(Ad, { where: { id: entityId } });
+      if (!ad) {
+        throw new NotFoundException('Ad not found');
+      }
     }
   }
 }

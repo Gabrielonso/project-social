@@ -9,6 +9,7 @@ import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { AdMedia } from 'src/modules/ads/entities/ads-media.entity';
 import { Like } from 'src/modules/engagements/entities/like.entity';
 import { Share } from 'src/modules/engagements/entities/share.entity';
+import { Comment } from 'src/modules/engagements/entities/comment.entity';
 dotenv.config();
 export const ormConfig: DataSourceOptions = {
   type: 'postgres',
@@ -26,6 +27,6 @@ export const ormConfig: DataSourceOptions = {
         },
   synchronize: process.env.DB_SYNCHRONIZATION === 'true',
   logging: process.env.DB_LOGGING === 'true',
-  entities: [User, Post, Media, PostMedia, Ad, AdMedia, Like, Share],
+  entities: [User, Post, Media, PostMedia, Ad, AdMedia, Like, Share, Comment],
   migrations: [],
 };
