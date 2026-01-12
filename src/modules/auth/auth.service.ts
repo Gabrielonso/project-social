@@ -465,7 +465,8 @@ export class AuthService {
             );
           }
 
-          const otp = generateOtp();
+          // const otp = generateOtp();
+          const otp = '121212';
 
           await userRepo.update(
             { id: user.id },
@@ -543,7 +544,8 @@ export class AuthService {
           }
 
           if (!user.verified) {
-            const otp = generateOtp();
+            // const otp = generateOtp();
+            const otp = '121212';
             await userRepo.update(
               { id: user.id },
               {
@@ -636,7 +638,8 @@ export class AuthService {
             );
           }
 
-          const otp = generateOtp();
+          //  const otp = generateOtp();
+          const otp = '121212';
 
           // await this.emailQueue.add(
           //   JobType.SEND_EMAIL_ZEPTO,

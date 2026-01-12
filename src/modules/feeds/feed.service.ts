@@ -83,8 +83,9 @@ export class FeedService {
           .getMany()
       : [];
 
-    const likes = await this.dataSource.query(
-      `
+    const likes = viewerId
+      ? await this.dataSource.query(
+          `
         SELECT entity, entity_id
         FROM likes
         WHERE user_id = $1
@@ -94,10 +95,11 @@ export class FeedService {
             (entity = 'ad' AND entity_id = ANY($3))
           )
         `,
-      [viewerId, postIds, adIds],
-    );
+          [viewerId, postIds, adIds],
+        )
+      : [];
 
-    const likedSet = new Set(likes.map((l) => `${l.entity}:${l.entity_id}`));
+    const likedSet = new Set(likes?.map((l) => `${l?.entity}:${l?.entity_id}`));
 
     // Map for fast lookup
     const postMap = new Map(

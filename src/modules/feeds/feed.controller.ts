@@ -3,18 +3,18 @@ import { FeedService } from './feed.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { FeedFilterDto } from './dtos/feed-filter.dto';
+import { JwtOptionalGuard } from 'src/common/guards/jwt-optional.guard';
 
 @ApiTags('Feeds')
 @Controller('feeds')
 export class FeedController {
   constructor(private readonly feedService: FeedService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOptionalGuard)
   @Get('')
   @ApiOperation({ summary: 'Get Feed' })
-  @ApiBearerAuth()
   async getFeed(@Query() feedFilterDto: FeedFilterDto, @Req() req) {
-    const userId: string = req.user.id;
+    const userId: string = req?.user?.id;
     return this.feedService.getFeed(userId, feedFilterDto);
   }
 }
