@@ -24,6 +24,8 @@ import { CreateCommentDto } from './dtos/create-comment.dto';
 import { CommentsService } from './services/comments.services';
 import { CommentsQueryDto } from './dtos/comments-query.dto';
 import { ReplyCommentDto } from './dtos/reply-comment.dto';
+import { BookmarksService } from './services/bookmarks.services';
+import { ToggleBookmarkDto } from './dtos/toggle-bookmark.dto';
 
 @ApiTags('Engagements')
 @ApiBearerAuth()
@@ -33,6 +35,7 @@ export class EngagementsController {
   constructor(
     private readonly likesService: LikesService,
     private readonly commentsService: CommentsService,
+    private readonly bookmarksService: BookmarksService,
   ) {}
 
   @Post('likes')
@@ -41,6 +44,18 @@ export class EngagementsController {
   async toggleLike(@Req() req, @Body() dto: ToggleLikeDto) {
     const userId: string = req.user.id;
     return this.likesService.toggleLike(dto.entity, dto.entityId, userId);
+  }
+
+  @Post('bookmarks')
+  @ApiOperation({ summary: 'Toggle bookmark for a post, ad, etc' })
+  @ApiBody({ type: ToggleLikeDto })
+  async toggleBookmark(@Req() req, @Body() dto: ToggleBookmarkDto) {
+    const userId: string = req.user.id;
+    return this.bookmarksService.toggleBookmark(
+      dto.entity,
+      dto.entityId,
+      userId,
+    );
   }
 
   @Post('comments')

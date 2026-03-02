@@ -49,6 +49,72 @@ export class FeedService {
     return this.hydrateFeed(userId, rows, page, limit);
   }
 
+  async getMyPublishedFeed(userId: string, feedFilterDto: FeedFilterDto) {
+    const page = Number(feedFilterDto.page) || 1;
+    const limit = Number(feedFilterDto.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const rows: RawFeedRow[] = await this.dataSource.query(
+      `
+      (
+        SELECT
+          p.id,
+          'post' AS type,
+          p.created_at AS "createdAt"
+        FROM posts p WHERE p.owner_id = $3
+      )
+      UNION ALL
+      (
+        SELECT
+          a.id,
+          'ad' AS type,
+          a.created_at AS "createdAt"
+        FROM ads a WHERE a.owner_id = $3
+      )
+      ORDER BY "createdAt" DESC
+      LIMIT $1 OFFSET $2
+      `,
+      [limit, offset, userId],
+    );
+
+    return this.hydrateFeed(userId, rows, page, limit);
+  }
+
+  async getPresence(userId: string, feedFilterDto: FeedFilterDto) {
+    const page = Number(feedFilterDto.page) || 1;
+    const limit = Number(feedFilterDto.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const rows: RawFeedRow[] = await this.dataSource.query(
+      `
+      (
+        SELECT
+          l.entity_id AS id,
+          l.entity AS type,
+          l.created_at AS "createdAt"
+        FROM likes l
+        WHERE l.user_id = $3
+          AND l.entity IN ('post', 'ad')
+      )
+      UNION
+      (
+        SELECT
+          b.entity_id AS id,
+          b.entity AS type,
+          b.created_at AS "createdAt"
+        FROM bookmarks b
+        WHERE b.user_id = $3
+          AND b.entity IN ('post', 'ad')
+      )
+      ORDER BY "createdAt" DESC
+      LIMIT $1 OFFSET $2
+      `,
+      [limit, offset, userId],
+    );
+
+    return this.hydrateFeed(userId, rows, page, limit);
+  }
+
   private async hydrateFeed(
     viewerId: string,
     rows: RawFeedRow[],
@@ -99,19 +165,47 @@ export class FeedService {
         )
       : [];
 
+    const bookmarks = viewerId
+      ? await this.dataSource.query(
+          `
+        SELECT entity, entity_id
+        FROM bookmarks
+        WHERE user_id = $1
+          AND (
+            (entity = 'post' AND entity_id = ANY($2))
+            OR
+            (entity = 'ad' AND entity_id = ANY($3))
+          )
+        `,
+          [viewerId, postIds, adIds],
+        )
+      : [];
+
     const likedSet = new Set(likes?.map((l) => `${l?.entity}:${l?.entity_id}`));
+
+    const bookmarkedSet = new Set(
+      bookmarks?.map((l) => `${l?.entity}:${l?.entity_id}`),
+    );
 
     // Map for fast lookup
     const postMap = new Map(
       posts.map((p) => [
         p.id,
-        { ...p, viewerHasLiked: likedSet.has(`${FeedType.POST}:${p.id}`) },
+        {
+          ...p,
+          viewerHasLiked: likedSet.has(`${FeedType.POST}:${p.id}`),
+          viewerHasBookmarked: bookmarkedSet.has(`${FeedType.POST}:${p.id}`),
+        },
       ]),
     );
     const adMap = new Map(
       ads.map((a) => [
         a.id,
-        { ...a, viewerHasLiked: likedSet.has(`${FeedType.AD}:${a.id}`) },
+        {
+          ...a,
+          viewerHasLiked: likedSet.has(`${FeedType.AD}:${a.id}`),
+          viewerHasBookmarked: bookmarkedSet.has(`${FeedType.AD}:${a.id}`),
+        },
       ]),
     );
 

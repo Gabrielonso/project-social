@@ -5,10 +5,12 @@ import { EngagementsController } from './engagement.controller';
 import { Module } from '@nestjs/common';
 import { CommentsService } from './services/comments.services';
 import { Comment } from './entities/comment.entity';
+import { Bookmark } from './entities/bookmark.entity';
+import { BookmarksService } from './services/bookmarks.services';
 
 @Module({
-  providers: [LikesService, CommentsService],
+  providers: [LikesService, CommentsService, BookmarksService],
   controllers: [EngagementsController],
-  imports: [TypeOrmModule.forFeature([Like, Comment])],
+  imports: [TypeOrmModule.forFeature([Like, Comment, Bookmark])],
 })
 export class EngagementsModule {}

@@ -14,6 +14,7 @@ import { MediaModule } from './modules/media/media.module';
 import { FeedModule } from './modules/feeds/feed.module';
 import { AdModule } from './modules/ads/ad.module';
 import { EngagementsModule } from './modules/engagements/engagements.module';
+import { RelationshipsModule } from './modules/relationships/relationships.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { EngagementsModule } from './modules/engagements/engagements.module';
     FeedModule,
     AdModule,
     EngagementsModule,
+    RelationshipsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

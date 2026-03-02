@@ -1,8 +1,17 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { PostService } from './post.service';
 import { CreatePostDto } from './dtos/create-post.dto';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { PostFilterDto } from './dtos/posts-filter.dto';
 
 @ApiTags('Posts')
 @ApiBearerAuth()
@@ -23,7 +32,8 @@ export class PostController {
   // @Get('')
   // @ApiOperation({ summary: 'Get Posts' })
   // @ApiBearerAuth()
-  // async getPosts(@Query() postFilterDto: PostFilterDto) {
-  //   return this.postService.getPosts(postFilterDto);
+  // async getPosts(@Query() postFilterDto: PostFilterDto, @Req() req) {
+  //   const userId: string = req.user.id;
+  //   return this.postService.getMyPostFeeds(postFilterDto, userId);
   // }
 }

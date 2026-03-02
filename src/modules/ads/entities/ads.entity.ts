@@ -63,6 +63,9 @@ export class Ad {
   @Column({ name: 'share_count', default: 0 })
   shareCount: number;
 
+  @Column({ name: 'bookmark_count', default: 0 })
+  bookmarkCount: number;
+
   /** Relationship */
   @OneToMany(() => AdMedia, (pm) => pm.ad, {
     cascade: true,

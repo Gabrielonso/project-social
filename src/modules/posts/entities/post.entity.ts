@@ -3,12 +3,10 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  JoinColumn,
-  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { User } from 'src/modules/user/entity/user.entity';
+
 import { PostMedia } from './post-media.entity';
 
 @Entity('posts')
@@ -39,6 +37,9 @@ export class Post {
 
   @Column({ name: 'share_count', default: 0 })
   shareCount: number;
+
+  @Column({ name: 'bookmark_count', default: 0 })
+  bookmarkCount: number;
 
   /** Relationship */
 

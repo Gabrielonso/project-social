@@ -17,6 +17,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { PostFilterDto } from './dtos/posts-filter.dto';
 import { MediaUploadFolder } from 'src/modules/media/enums/media-upload-folder.enum';
 import { User } from '../user/entity/user.entity';
+import { RawFeedRow } from '../feeds/types/feed.types';
+import { FeedType } from '../feeds/enums/feed-type.enum';
+import { Ad } from '../ads/entities/ads.entity';
 
 @Injectable()
 export class PostService {
@@ -24,6 +27,8 @@ export class PostService {
     private readonly dataSource: DataSource,
     @InjectRepository(Post)
     private postRepo: Repository<Post>,
+    @InjectRepository(Ad)
+    private adRepo: Repository<Ad>,
   ) {}
 
   async createPost(dto: CreatePostDto, userId: string) {
@@ -116,91 +121,154 @@ export class PostService {
     }
   }
 
-  async getPosts(postFilterDto: PostFilterDto) {
-    try {
-      // const [posts, total]: [Post[], number] = await this.postRepo.findAndCount(
-      //   {
-      //     relations: [
-      //       'user',
-      //       'medias',
-      //       // "attendees",
-      //       // "attendees.user",
-      //       // "likes",
-      //       // "tags",
-      //       // "tags.user",
-      //     ],
-      //     select: {
-      //       user: {
-      //         id: true,
-      //         username: true,
-      //         profilePicture: true,
-      //       },
-      //       // attendees: {
-      //       //   ['id']: true,
-      //       //   ['user']: { id: true },
-      //       //   ['status']: true,
-      //       // },
-      //       // likes: { id: true },
-      //       // tags: {
-      //       //   ['id']: true,
-      //       //   ['name']: true,
-      //       //   ['user']: {
-      //       //     id: true,
-      //       //     username: true,
-      //       //     avatar: true,
-      //       //     first_name: true,
-      //       //     last_name: true,
-      //       //   },
-      //       // },
-      //     },
-      //     // where: {
-      //     //   user: {
-      //     //     ...(blockedUsers && { id: Not(Any(blockedUsers)) }),
-      //     //     incognito: false,
-      //     //   },
-      //     //   ...(hiddenPost.length > 0 && { id: Not(Any(hiddenPost)) }),
-      //     // },
-      //     take: limit,
-      //     skip: (batch - 1) * limit,
-      //     order: { createdAt: 'DESC' },
-      //   },
-      // );
+  // async getMyPostFeeds(postFilterDto: PostFilterDto, userId: string) {
+  //   try {
+  //     const page = Number(postFilterDto.page) || 1;
+  //     const limit = Number(postFilterDto.limit) || 20;
+  //     const offset = (page - 1) * limit;
 
-      // const data = await updateLikes(posts, "post", req.userId);
+  //     const rows = await this.dataSource.query(
+  //       `
+  //       (
+  //         SELECT
+  //           p.id,
+  //           'post' AS type,
+  //           p.created_at AS "createdAt"
+  //         FROM posts p WHERE p.owner_id = $3
+  //       )
+  //       UNION ALL
+  //       (
+  //         SELECT
+  //           a.id,
+  //           'ad' AS type,
+  //           a.created_at AS "createdAt"
+  //         FROM ads a WHERE a.owner_id = $3
+  //       )
+  //       ORDER BY "createdAt" DESC
+  //       LIMIT $1 OFFSET $2
+  //       `,
+  //       [limit, offset, userId],
+  //     );
 
-      const page = Number(postFilterDto.page) || 1;
-      const limit = postFilterDto.limit ? Number(postFilterDto.limit) : null;
-      const skip = limit ? (page - 1) * limit : 0;
+  //     return this.hydrateMyFeed(userId, rows, page, limit);
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // }
 
-      const qb = this.postRepo
-        .createQueryBuilder('post')
-        .leftJoinAndSelect('post.user', 'user')
-        .leftJoinAndSelect('post.medias', 'medias')
-        .select([
-          'post',
-          'user.id',
-          'user.username',
-          'user.profilePicture',
-          'medias',
-        ])
-        .leftJoinAndSelect('medias.media', 'media');
+  // private async hydrateMyFeed(
+  //   viewerId: string,
+  //   rows: RawFeedRow[],
+  //   page: number,
+  //   limit: number,
+  // ) {
+  //   const postIds = rows
+  //     .filter((r) => r.type === FeedType.POST)
+  //     .map((r) => r.id);
 
-      qb.orderBy('post.createdAt', 'DESC');
+  //   const adIds = rows.filter((r) => r.type === FeedType.AD).map((r) => r.id);
 
-      if (limit) {
-        qb.skip(skip).take(limit);
-      }
+  //   // Fetch posts exactly how you already do
+  //   const posts = postIds.length
+  //     ? await this.postRepo
+  //         .createQueryBuilder('post')
+  //         .leftJoinAndSelect('post.medias', 'medias')
+  //         .select(['post', 'medias'])
+  //         .leftJoinAndSelect('medias.media', 'media')
+  //         .where('post.id IN (:...ids)', { ids: postIds })
+  //         .getMany()
+  //     : [];
 
-      const [data, total] = await qb.getManyAndCount();
+  //   // Fetch ads (simple)
+  //   const ads = adIds.length
+  //     ? await this.adRepo
+  //         .createQueryBuilder('ad')
+  //         .leftJoinAndSelect('ad.medias', 'medias')
+  //         .select(['ad', 'medias'])
+  //         .leftJoinAndSelect('medias.media', 'media')
+  //         .where('ad.id IN (:...ids)', { ids: adIds })
+  //         .getMany()
+  //     : [];
 
-      return successResponse('Operation Successful', {
-        data,
-        total,
-        currentPage: page,
-        totalPages: limit ? Math.ceil(total / limit) : 1,
-      });
-    } catch (error) {
-      throw error;
-    }
-  }
+  //   const likes = viewerId
+  //     ? await this.dataSource.query(
+  //         `
+  //       SELECT entity, entity_id
+  //       FROM likes
+  //       WHERE user_id = $1
+  //         AND (
+  //           (entity = 'post' AND entity_id = ANY($2))
+  //           OR
+  //           (entity = 'ad' AND entity_id = ANY($3))
+  //         )
+  //       `,
+  //         [viewerId, postIds, adIds],
+  //       )
+  //     : [];
+
+  //   const bookmarks = viewerId
+  //     ? await this.dataSource.query(
+  //         `
+  //       SELECT entity, entity_id
+  //       FROM bookmarks
+  //       WHERE user_id = $1
+  //         AND (
+  //           (entity = 'post' AND entity_id = ANY($2))
+  //           OR
+  //           (entity = 'ad' AND entity_id = ANY($3))
+  //         )
+  //       `,
+  //         [viewerId, postIds, adIds],
+  //       )
+  //     : [];
+
+  //   const likedSet = new Set(likes?.map((l) => `${l?.entity}:${l?.entity_id}`));
+
+  //   const bookmarkedSet = new Set(
+  //     bookmarks?.map((l) => `${l?.entity}:${l?.entity_id}`),
+  //   );
+
+  //   // Map for fast lookup
+  //   const postMap = new Map(
+  //     posts.map((p) => [
+  //       p.id,
+  //       {
+  //         ...p,
+  //         viewerHasLiked: likedSet.has(`${FeedType.POST}:${p.id}`),
+  //         viewerHasBookmarked: bookmarkedSet.has(`${FeedType.POST}:${p.id}`),
+  //       },
+  //     ]),
+  //   );
+  //   const adMap = new Map(
+  //     ads.map((a) => [
+  //       a.id,
+  //       {
+  //         ...a,
+  //         viewerHasLiked: likedSet.has(`${FeedType.AD}:${a.id}`),
+  //         viewerHasBookmarked: bookmarkedSet.has(`${FeedType.AD}:${a.id}`),
+  //       },
+  //     ]),
+  //   );
+
+  //   // Rebuild ordered feed
+  //   const feed = rows.map((row) => {
+  //     if (row.type === FeedType.POST) {
+  //       return {
+  //         type: 'post',
+  //         data: postMap.get(row.id),
+  //       };
+  //     }
+
+  //     return {
+  //       type: 'ad',
+  //       data: adMap.get(row.id),
+  //     };
+  //   });
+
+  //   return successResponse('Operation Successful', {
+  //     data: feed,
+  //     currentPage: page,
+  //     totalPages: Math.ceil(feed.length / limit),
+  //   });
+  // }
 }

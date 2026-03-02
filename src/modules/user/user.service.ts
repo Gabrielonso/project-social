@@ -19,6 +19,9 @@ import {
 } from 'src/common/utils/utilityFunctions';
 import { hash } from 'bcryptjs';
 import { customAlphabet } from 'nanoid';
+import { Follow } from 'src/modules/engagements/entities/follow.entity';
+import { Post } from 'src/modules/posts/entities/post.entity';
+import { Ad } from 'src/modules/ads/entities/ads.entity';
 
 @Injectable()
 export class UserService {
@@ -164,80 +167,149 @@ export class UserService {
   }
 
   async update(updateUserDto: UpdateUserDto, userId: string) {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.NOT_FOUND,
-          message: 'User not found',
-        },
-        HttpStatus.NOT_FOUND,
-      );
-    }
-    await this.userRepository.update(userId, updateUserDto);
-    // if (
-    //   oldUser.username !== newUser.username ||
-    //   oldUser.profilePicture !== newUser.profilePicture
-    // ) {
-    //   this.eventEmitter.emit(
-    //     'user.profile.updated',
-    //     {
-    //       userId: user.id,
-    //       username: user.username,
-    //       profilePicture: user.profilePicture,
-    //     },
-    //   );
-    // }
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.NOT_FOUND,
+            message: 'User not found',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      if (updateUserDto.username && updateUserDto.username !== user.username) {
+        const existingUsername = await this.userRepository.findOne({
+          where: { username: updateUserDto.username },
+        });
+        if (existingUsername && existingUsername.id !== userId) {
+          throw new HttpException(
+            {
+              statusCode: HttpStatus.CONFLICT,
+              message: 'Username is already taken',
+            },
+            HttpStatus.CONFLICT,
+          );
+        }
+      }
 
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Successfully updated user',
-    };
+      await this.userRepository.update(userId, updateUserDto);
+      // if (
+      //   oldUser.username !== newUser.username ||
+      //   oldUser.profilePicture !== newUser.profilePicture
+      // ) {
+      //   this.eventEmitter.emit(
+      //     'user.profile.updated',
+      //     {
+      //       userId: user.id,
+      //       username: user.username,
+      //       profilePicture: user.profilePicture,
+      //     },
+      //   );
+      // }
+
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Successfully updated user',
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 
-  async getUser(id: string) {
-    const user = await this.userRepository.findOne({
-      where: { id },
-      relations: ['wallet.paymentAccounts'],
-    });
+  async getUser(id: string, authUserId: string) {
+    try {
+      const user = await this.userRepository.findOne({ where: { id } });
 
-    if (!user) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.NOT_FOUND,
-          message: 'User not found',
+      if (!user) {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.NOT_FOUND,
+            message: 'User not found',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const followRepo = this.dataSource.getRepository(Follow);
+      const postRepo = this.dataSource.getRepository(Post);
+      const adRepo = this.dataSource.getRepository(Ad);
+
+      const [followersCount, followingCount, posts, ads] = await Promise.all([
+        followRepo.count({ where: { followingId: id } }),
+        followRepo.count({ where: { followerId: id } }),
+        postRepo.count({ where: { ownerId: id } }),
+        adRepo.count({ where: { ownerId: id } }),
+      ]);
+      const follows = await followRepo.find({
+        where: [
+          { followerId: id, followingId: authUserId },
+          { followerId: authUserId, followingId: id },
+        ],
+      });
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Operation successful',
+        data: {
+          ...user,
+          followersCount,
+          followingCount,
+          postsCount: posts + ads,
+          isMyfollower: follows
+            ?.map((follow) => follow?.followerId)
+            ?.includes(id)
+            ? true
+            : false,
+          iFollow: follows?.map((follow) => follow?.followingId)?.includes(id)
+            ? true
+            : false,
         },
-        HttpStatus.NOT_FOUND,
-      );
+      };
+    } catch (error) {
+      throw error;
     }
-
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Operation successful',
-      data: user,
-    };
   }
 
   async getMyUserDetails(id: string) {
-    const user = await this.userRepository.findOne({ where: { id } });
+    try {
+      const user = await this.userRepository.findOne({ where: { id } });
 
-    if (!user) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.NOT_FOUND,
-          message: 'User not found',
+      if (!user) {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.NOT_FOUND,
+            message: 'User not found',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const followRepo = this.dataSource.getRepository(Follow);
+      const postRepo = this.dataSource.getRepository(Post);
+      const adRepo = this.dataSource.getRepository(Ad);
+
+      const [followersCount, followingCount, posts, ads] = await Promise.all([
+        followRepo.count({ where: { followingId: id } }),
+        followRepo.count({ where: { followerId: id } }),
+        postRepo.count({ where: { ownerId: id } }),
+        adRepo.count({ where: { ownerId: id } }),
+      ]);
+
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Operation successful',
+        data: {
+          ...user,
+          followersCount,
+          followingCount,
+          postsCount: posts + ads,
         },
-        HttpStatus.NOT_FOUND,
-      );
+      };
+    } catch (error) {
+      throw error;
     }
-
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Operation successful',
-      data: user,
-    };
   }
 
   findByEmail(email: string) {
@@ -261,25 +333,29 @@ export class UserService {
     updateUserStatusDto: UpdateUserStatusDto,
     userId: string,
   ) {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.NOT_FOUND,
-          message: 'User not found',
-        },
-        HttpStatus.NOT_FOUND,
-      );
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.NOT_FOUND,
+            message: 'User not found',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      await this.userRepository.update(userId, {
+        status: updateUserStatusDto.status,
+      });
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Successfully updated user status',
+      };
+    } catch (error) {
+      throw error;
     }
-    await this.userRepository.update(userId, {
-      status: updateUserStatusDto.status,
-    });
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Successfully updated user status',
-    };
   }
 
   async deleteMyAccount(id: string) {
@@ -348,5 +424,33 @@ export class UserService {
       statusCode: HttpStatus.OK,
       message: 'Successfully restored user account',
     };
+  }
+
+  async verifyUsername(username: string) {
+    try {
+      if (!username) {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Username is required',
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const existing = await this.userRepository.findOne({
+        where: { username },
+      });
+
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Operation successful',
+        data: {
+          available: !existing,
+        },
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 }

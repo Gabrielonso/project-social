@@ -41,6 +41,12 @@ export class User {
   @Column({ type: 'text', unique: true, nullable: true })
   username: string;
 
+  @Column({ name: 'bio', type: 'text', nullable: true })
+  bio: string;
+
+  @Column({ name: 'country_code', type: 'text', nullable: true })
+  countryCode: string;
+
   @Column({ name: 'profile_picture', type: 'text', nullable: true })
   profilePicture: string;
 
