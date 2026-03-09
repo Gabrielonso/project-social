@@ -15,6 +15,8 @@ import { Ad } from './entities/ads.entity';
 import { AdMedia } from './entities/ads-media.entity';
 import { MediaUploadFolder } from 'src/modules/media/enums/media-upload-folder.enum';
 import { User } from '../user/entity/user.entity';
+import { normalizeHashtags } from 'src/common/utils/hashtags.util';
+import { UpdateAdDto } from './dtos/update-ad.dto';
 
 @Injectable()
 export class AdService {
@@ -42,17 +44,54 @@ export class AdService {
             );
           }
 
+          let soundMedia: Media | null = null;
+          if (dto.sound) {
+            const m = dto.sound;
+            if (
+              !m.sourceIdOrKey.startsWith(`${MediaUploadFolder.ADS}/${userId}/`)
+            ) {
+              throw new ForbiddenException('Invalid sound ownership or folder');
+            }
+
+            if (m.type !== MediaType.AUDIO) {
+              throw new HttpException(
+                {
+                  statusCode: HttpStatus.BAD_REQUEST,
+                  message: 'Ad sounds must be of type audio',
+                },
+                HttpStatus.BAD_REQUEST,
+              );
+            }
+
+            const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
+
+            const sound = mediaRepo.create({
+              provider: m.provider,
+              type: m.type,
+              sourceIdOrKey: m.sourceIdOrKey,
+              duration: m.duration,
+              status: isCloudinary ? MediaStatus.READY : MediaStatus.PROCESSING,
+              originalUrl: m.originalUrl,
+              streamUrl: m.streamUrl,
+              size: m.size,
+            });
+
+            soundMedia = await mediaRepo.save(sound);
+          }
+
           const ad = adRepo.create({
             ownerId: user.id,
             ownerUsername: user.username,
             ownerAvatar: user.profilePicture,
             content: dto.description,
+            hashtags: normalizeHashtags(dto.hashtags),
             targetCountry: dto.country,
             targetGender: dto.gender,
             maxAge: dto.maxAge,
             minAge: dto.minAge,
             topic: dto.topic,
             status: 'active',
+            sound: soundMedia || undefined,
           });
           const savedAd = await adRepo.save(ad);
 
@@ -83,13 +122,13 @@ export class AdService {
             });
           });
 
-          const adMedias = mediaEntities.map((media, index) => {
-            return adMediaRepo.create({
+          const adMedias = mediaEntities.map((media, index) =>
+            adMediaRepo.create({
               position: index,
               ad: savedAd,
               media,
-            });
-          });
+            }),
+          );
 
           await adMediaRepo.save(adMedias);
 
@@ -110,6 +149,37 @@ export class AdService {
           return successResponse('Successfully created ad');
         },
       );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateAd(adId: string, dto: UpdateAdDto, userId: string) {
+    try {
+      const adRepo = this.dataSource.getRepository(Ad);
+      const ad = await adRepo.findOne({ where: { id: adId } });
+
+      if (!ad) {
+        throw new HttpException(
+          { statusCode: HttpStatus.NOT_FOUND, message: 'Ad not found' },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      if (ad.ownerId !== userId) {
+        throw new ForbiddenException('You are not allowed to edit this ad');
+      }
+
+      const updatePayload: Partial<Ad> = {};
+      if (dto.topic !== undefined) updatePayload.topic = dto.topic;
+      if (dto.description !== undefined)
+        updatePayload.content = dto.description;
+      if (dto.hashtags !== undefined)
+        updatePayload.hashtags = normalizeHashtags(dto.hashtags);
+
+      await adRepo.update({ id: adId }, updatePayload);
+
+      return successResponse('Successfully updated ad');
     } catch (error) {
       throw error;
     }

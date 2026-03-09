@@ -10,6 +10,7 @@ import {
 import { User } from 'src/modules/user/entity/user.entity';
 import { AdMedia } from './ads-media.entity';
 import { Gender } from 'src/common/enums/gender.enum';
+import { Media } from 'src/modules/media/entities/media.entity';
 
 @Entity('ads')
 export class Ad {
@@ -21,6 +22,9 @@ export class Ad {
 
   @Column({ type: 'text', nullable: true })
   content?: string;
+
+  @Column({ type: 'text', array: true, nullable: true })
+  hashtags?: string[];
 
   // 🔹 NEW — ownership reference
   @Column({ name: 'owner_id', nullable: true })
@@ -71,6 +75,13 @@ export class Ad {
     cascade: true,
   })
   medias: AdMedia[];
+
+  @ManyToOne(() => Media, {
+    nullable: true,
+    eager: true,
+  })
+  @JoinColumn({ name: 'sound_media_id' })
+  sound?: Media;
 
   /*** Date Related ***/
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })

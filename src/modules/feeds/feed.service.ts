@@ -115,8 +115,8 @@ export class FeedService {
     return this.hydrateFeed(userId, rows, page, limit);
   }
 
-  private async hydrateFeed(
-    viewerId: string,
+  async hydrateFeed(
+    viewerId: string | undefined,
     rows: RawFeedRow[],
     page: number,
     limit: number,
@@ -132,7 +132,8 @@ export class FeedService {
       ? await this.postRepo
           .createQueryBuilder('post')
           .leftJoinAndSelect('post.medias', 'medias')
-          .select(['post', 'medias'])
+          .leftJoinAndSelect('post.sound', 'sound')
+          .select(['post', 'medias', 'sound'])
           .leftJoinAndSelect('medias.media', 'media')
           .where('post.id IN (:...ids)', { ids: postIds })
           .getMany()
@@ -143,7 +144,8 @@ export class FeedService {
       ? await this.adRepo
           .createQueryBuilder('ad')
           .leftJoinAndSelect('ad.medias', 'medias')
-          .select(['ad', 'medias'])
+          .leftJoinAndSelect('ad.sound', 'sound')
+          .select(['ad', 'medias', 'sound'])
           .leftJoinAndSelect('medias.media', 'media')
           .where('ad.id IN (:...ids)', { ids: adIds })
           .getMany()

@@ -9,5 +9,6 @@ import { Ad } from 'src/modules/ads/entities/ads.entity';
   providers: [FeedService],
   controllers: [FeedController],
   imports: [TypeOrmModule.forFeature([Post, Ad])],
+  exports: [FeedService],
 })
 export class FeedModule {}

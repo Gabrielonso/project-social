@@ -20,6 +20,8 @@ import { User } from '../user/entity/user.entity';
 import { RawFeedRow } from '../feeds/types/feed.types';
 import { FeedType } from '../feeds/enums/feed-type.enum';
 import { Ad } from '../ads/entities/ads.entity';
+import { normalizeHashtags } from 'src/common/utils/hashtags.util';
+import { UpdatePostDto } from './dtos/update-post.dto';
 
 @Injectable()
 export class PostService {
@@ -52,11 +54,50 @@ export class PostService {
               HttpStatus.NOT_FOUND,
             );
           }
+          let soundMedia: Media | null = null;
+          if (dto.sound) {
+            const m = dto.sound;
+            if (
+              !m.sourceIdOrKey.startsWith(
+                `${MediaUploadFolder.POSTS}/${userId}/`,
+              )
+            ) {
+              throw new ForbiddenException('Invalid sound ownership or folder');
+            }
+
+            if (m.type !== MediaType.AUDIO) {
+              throw new HttpException(
+                {
+                  statusCode: HttpStatus.BAD_REQUEST,
+                  message: 'Post sounds must be of type audio',
+                },
+                HttpStatus.BAD_REQUEST,
+              );
+            }
+
+            const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
+
+            const sound = mediaRepo.create({
+              provider: m.provider,
+              type: m.type,
+              sourceIdOrKey: m.sourceIdOrKey,
+              duration: m.duration,
+              status: isCloudinary ? MediaStatus.READY : MediaStatus.PROCESSING,
+              originalUrl: m.originalUrl,
+              streamUrl: m.streamUrl,
+              size: m.size,
+            });
+
+            soundMedia = await mediaRepo.save(sound);
+          }
+
           const post = postRepo.create({
             content: dto.caption,
+            hashtags: normalizeHashtags(dto.hashtags),
             ownerId: user.id,
             ownerUsername: user.username,
             ownerAvatar: user.profilePicture,
+            sound: soundMedia || undefined,
           });
           const savedPost = await postRepo.save(post);
 
@@ -89,13 +130,13 @@ export class PostService {
             });
           });
 
-          const postMedias = mediaEntities.map((media, index) => {
-            return postMediaRepo.create({
+          const postMedias = mediaEntities.map((media, index) =>
+            postMediaRepo.create({
               position: index,
               post: savedPost,
               media,
-            });
-          });
+            }),
+          );
 
           await postMediaRepo.save(postMedias);
 
@@ -116,6 +157,33 @@ export class PostService {
           return successResponse('Successfully created post');
         },
       );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updatePost(postId: string, dto: UpdatePostDto, userId: string) {
+    try {
+      const post = await this.postRepo.findOne({ where: { id: postId } });
+      if (!post) {
+        throw new HttpException(
+          { statusCode: HttpStatus.NOT_FOUND, message: 'Post not found' },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      if (post.ownerId !== userId) {
+        throw new ForbiddenException('You are not allowed to edit this post');
+      }
+
+      const updatePayload: Partial<Post> = {};
+      if (dto.caption !== undefined) updatePayload.content = dto.caption;
+      if (dto.hashtags !== undefined)
+        updatePayload.hashtags = normalizeHashtags(dto.hashtags);
+
+      await this.postRepo.update({ id: postId }, updatePayload);
+
+      return successResponse('Successfully updated post');
     } catch (error) {
       throw error;
     }

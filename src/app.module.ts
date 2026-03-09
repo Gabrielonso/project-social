@@ -15,6 +15,8 @@ import { FeedModule } from './modules/feeds/feed.module';
 import { AdModule } from './modules/ads/ad.module';
 import { EngagementsModule } from './modules/engagements/engagements.module';
 import { RelationshipsModule } from './modules/relationships/relationships.module';
+import { TrendsModule } from './modules/trends/trends.module';
+import { SoundsModule } from './modules/sounds/sounds.module';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { RelationshipsModule } from './modules/relationships/relationships.modul
     AdModule,
     EngagementsModule,
     RelationshipsModule,
+    TrendsModule,
+    SoundsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

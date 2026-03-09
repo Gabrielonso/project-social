@@ -5,9 +5,12 @@ import {
   Index,
   OneToMany,
   PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 
 import { PostMedia } from './post-media.entity';
+import { Media } from 'src/modules/media/entities/media.entity';
 
 @Entity('posts')
 @Index(['ownerId'])
@@ -17,6 +20,9 @@ export class Post {
 
   @Column({ type: 'text', nullable: true })
   content?: string;
+
+  @Column({ type: 'text', array: true, nullable: true })
+  hashtags?: string[];
 
   // 🔹 NEW — ownership reference
   @Column({ name: 'owner_id', nullable: true })
@@ -47,6 +53,13 @@ export class Post {
     cascade: true,
   })
   medias: PostMedia[];
+
+  @ManyToOne(() => Media, {
+    nullable: true,
+    eager: true,
+  })
+  @JoinColumn({ name: 'sound_media_id' })
+  sound?: Media;
 
   /*** Date Related ***/
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })

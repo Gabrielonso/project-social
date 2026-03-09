@@ -44,16 +44,56 @@ export class Media {
   @Column({ name: 'stream_url', nullable: true })
   streamUrl: string;
 
-  @Column({ nullable: true })
+  @Column({
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: {
+      from: (value: string) => parseFloat(value),
+      to: (value: number) => value,
+    },
+    nullable: true,
+  })
   duration: number;
 
-  @Column({ nullable: true })
+  @Column({
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: {
+      from: (value: string) => parseFloat(value),
+      to: (value: number) => value,
+    },
+    nullable: true,
+  })
   width: number;
 
-  @Column({ nullable: true })
+  @Column({
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: {
+      from: (value: string) => parseFloat(value),
+      to: (value: number) => value,
+    },
+    nullable: true,
+  })
   height: number;
 
-  @Column({ nullable: true })
+  @Column({
+    type: 'decimal',
+    precision: 15,
+    scale: 2,
+    default: 0,
+    transformer: {
+      from: (value: string) => parseFloat(value),
+      to: (value: number) => value,
+    },
+    nullable: true,
+  })
   size: number; // File size in bytes
 
   //   @Index()
