@@ -258,7 +258,8 @@ export class AuthService {
               HttpStatus.BAD_REQUEST,
             );
           }
-
+          const dob = new Date(signupUserDto.dob);
+          dob.setHours(1, 0, 0, 0);
           const encryptedPassword = await this.hashPassword(
             signupUserDto.password,
           );
@@ -278,6 +279,7 @@ export class AuthService {
             lastName,
             otp,
             otpExpiresAt: new Date(new Date().getTime() + 15 * 60000),
+            dob,
           });
 
           // await this.emailQueue.add(

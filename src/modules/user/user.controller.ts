@@ -25,11 +25,15 @@ import {
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { VerifyUsernameDto } from './dto/verify-username.dto';
 import { JwtOptionalGuard } from 'src/common/guards/jwt-optional.guard';
+import { FollowsService } from '../engagements/services/follows.services';
 
 @ApiTags('Users')
 @Controller('users')
 export class UserController {
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private readonly followsService: FollowsService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get()
@@ -111,17 +115,37 @@ export class UserController {
 
   @UseGuards(JwtAuthGuard)
   @Post('/:userId/restore')
-  restore(@Param('userId', new ParseUUIDPipe()) userId) {
+  restore(@Param('userId', new ParseUUIDPipe()) userId: string) {
     return this.userService.restoreUser(userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('/:userId/status')
   changeUserStatus(
-    @Param('userId', new ParseUUIDPipe()) userId,
+    @Param('userId', new ParseUUIDPipe()) userId: string,
     @Body() updateUserStatus: UpdateUserStatusDto,
   ) {
     return this.userService.updateUserStatus(updateUserStatus, userId);
+  }
+
+  @Get('/:userId/followers')
+  @ApiOperation({ summary: 'Get my followers' })
+  getUserFollowers(
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Req() req,
+  ) {
+    const authUserId: string = req.user.id;
+    return this.followsService.getUserFollowers(userId, authUserId);
+  }
+
+  @Get('/:userId/following')
+  @ApiOperation({ summary: 'Get users I am following' })
+  getUserFollowing(
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Req() req,
+  ) {
+    const authUserId: string = req.user.id;
+    return this.followsService.getUserFollowing(userId, authUserId);
   }
 
   @Get('/verify-username')

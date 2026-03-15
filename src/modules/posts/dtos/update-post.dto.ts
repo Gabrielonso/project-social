@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsOptional,
   IsString,
   Length,
@@ -31,5 +32,30 @@ export class UpdatePostDto {
   @Length(1, 50, { each: true })
   @Matches(/^[a-zA-Z0-9_#]+$/, { each: true })
   hashtags?: string[];
-}
 
+  @ApiPropertyOptional({
+    description: 'Allow Comments for this post',
+    example: true,
+    type: 'boolean',
+  })
+  @IsBoolean()
+  @IsOptional()
+  allowComments: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Make Post Public',
+    example: true,
+    type: 'boolean',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isPublic: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Post location',
+    example: 'Trademore estate, Lugbe, Abuja',
+  })
+  @IsString()
+  @IsOptional()
+  location?: string;
+}

@@ -1,4 +1,12 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, Length, Matches } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Length,
+  Matches,
+} from 'class-validator';
 import { UserStatusEnum } from '../interfaces/user.interfaces';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -23,8 +31,7 @@ export class UpdateUserDto {
   @IsOptional()
   @Length(3, 30)
   @Matches(/^[a-zA-Z0-9_]+$/, {
-    message:
-      'Username can only contain letters, numbers, and underscores',
+    message: 'Username can only contain letters, numbers, and underscores',
   })
   username: string;
 
@@ -45,6 +52,25 @@ export class UpdateUserDto {
   @IsOptional()
   @Length(2, 3)
   countryCode: string;
+
+  @ApiPropertyOptional({
+    description: 'User profile picture url',
+    example: 'https://...jpg',
+  })
+  @IsUrl()
+  @IsString()
+  @IsOptional()
+  profilePictureUrl: string;
+
+  @ApiPropertyOptional({
+    description: 'User date of birth',
+    example: '1999-10-24',
+  })
+  @IsString()
+  @Length(10)
+  //@IsDateString()
+  @IsOptional()
+  dob: Date;
 }
 
 export class UpdateUserStatusDto {

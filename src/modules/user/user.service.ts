@@ -194,8 +194,23 @@ export class UserService {
           );
         }
       }
+      let dob = new Date();
 
-      await this.userRepository.update(userId, updateUserDto);
+      if (updateUserDto.dob && updateUserDto.dob !== undefined) {
+        dob = new Date(updateUserDto?.dob);
+        dob.setHours(1, 0, 0, 0);
+      }
+
+      await this.userRepository.update(userId, {
+        ...updateUserDto,
+        ...(updateUserDto.profilePictureUrl && {
+          profilePicture: updateUserDto.profilePictureUrl,
+        }),
+        ...(updateUserDto.dob &&
+          updateUserDto.dob !== undefined && {
+            dob,
+          }),
+      });
       // if (
       //   oldUser.username !== newUser.username ||
       //   oldUser.profilePicture !== newUser.profilePicture

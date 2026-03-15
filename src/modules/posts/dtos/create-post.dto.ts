@@ -10,6 +10,8 @@ import {
   ArrayMaxSize,
   Matches,
   Length,
+  IsBoolean,
+  IsUrl,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -21,6 +23,7 @@ class MediaDto {
     description: `Media file's original URL`,
     example: 'https://...mp4',
   })
+  @IsUrl()
   @IsString()
   @IsNotEmpty()
   originalUrl: string;
@@ -29,6 +32,7 @@ class MediaDto {
     example: 'https://...sp_auto...m3u8',
     description: 'HTTP Live Streaming URL',
   })
+  @IsUrl()
   @IsString()
   @IsOptional()
   streamUrl: string;
@@ -201,4 +205,30 @@ export class CreatePostDto {
   @ValidateNested({ each: true })
   @Type(() => MediaDto)
   media: MediaDto[];
+
+  @ApiPropertyOptional({
+    description: 'Allow Comments for this post',
+    example: true,
+    type: 'boolean',
+  })
+  @IsBoolean()
+  @IsOptional()
+  allowComments: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Make Post Public',
+    example: true,
+    type: 'boolean',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isPublic: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Post location',
+    example: 'Trademore estate, Lugbe, Abuja',
+  })
+  @IsString()
+  @IsOptional()
+  location?: string;
 }

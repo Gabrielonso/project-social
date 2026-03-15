@@ -47,6 +47,15 @@ export class Post {
   @Column({ name: 'bookmark_count', default: 0 })
   bookmarkCount: number;
 
+  @Column({ name: 'allow_comments', default: true })
+  allowComments: boolean;
+
+  @Column({ name: 'is_public', default: true })
+  isPublic: boolean;
+
+  @Column({ name: 'location', nullable: true })
+  location?: string;
+
   /** Relationship */
 
   @OneToMany(() => PostMedia, (pm) => pm.post, {

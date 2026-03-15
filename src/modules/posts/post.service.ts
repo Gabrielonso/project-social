@@ -98,6 +98,9 @@ export class PostService {
             ownerUsername: user.username,
             ownerAvatar: user.profilePicture,
             sound: soundMedia || undefined,
+            allowComments: dto.allowComments,
+            isPublic: dto.isPublic,
+            location: dto.location,
           });
           const savedPost = await postRepo.save(post);
 
@@ -180,6 +183,10 @@ export class PostService {
       if (dto.caption !== undefined) updatePayload.content = dto.caption;
       if (dto.hashtags !== undefined)
         updatePayload.hashtags = normalizeHashtags(dto.hashtags);
+      if (dto.allowComments !== undefined)
+        updatePayload.allowComments = dto.allowComments;
+      if (dto.isPublic !== undefined) updatePayload.isPublic = dto.isPublic;
+      if (dto.location !== undefined) updatePayload.location = dto.location;
 
       await this.postRepo.update({ id: postId }, updatePayload);
 

@@ -163,4 +163,48 @@ export class FollowsService {
       throw error;
     }
   }
+
+  async getUserFollowers(userId: string, authserId?: string) {
+    try {
+      const follows = await this.followRepo.find({
+        where: { followingId: userId },
+      });
+
+      if (!follows.length) {
+        return successResponse('Successfully fetched followers', []);
+      }
+
+      const followerIds = [...new Set(follows.map((f) => f.followerId))];
+
+      const followers = await this.userRepo.find({
+        where: { id: In(followerIds) },
+      });
+
+      return successResponse('Successfully fetched followers', followers);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getUserFollowing(userId: string, authserId?: string) {
+    try {
+      const follows = await this.followRepo.find({
+        where: { followerId: userId },
+      });
+
+      if (!follows.length) {
+        return successResponse('Successfully fetched following', []);
+      }
+
+      const followingIds = [...new Set(follows.map((f) => f.followingId))];
+
+      const following = await this.userRepo.find({
+        where: { id: In(followingIds) },
+      });
+
+      return successResponse('Successfully fetched following', following);
+    } catch (error) {
+      throw error;
+    }
+  }
 }

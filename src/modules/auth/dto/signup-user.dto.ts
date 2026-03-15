@@ -1,10 +1,12 @@
 import { TransformToLowercase } from 'src/common/utils/transformers.util';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsDateString,
   IsEmail,
   IsNotEmpty,
   IsString,
+  Length,
   Matches,
   MinLength,
 } from 'class-validator';
@@ -41,6 +43,16 @@ export class SignupUserDto {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @ApiProperty({
+    description: 'User date of birth',
+    example: '1999-10-24',
+  })
+  @IsString()
+  @Length(10)
+  //@IsDateString()
+  @IsNotEmpty()
+  dob: Date;
 
   // @ApiPropertyOptional({ description: 'Optional tenant ID', example: 'abc-123-xyz' })
 }
