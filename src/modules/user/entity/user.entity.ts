@@ -124,7 +124,7 @@ export class User {
   userRefId: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  dob: Date;
+  dob?: Date;
 
   @Column({ type: 'text', nullable: true, select: false })
   password: string;

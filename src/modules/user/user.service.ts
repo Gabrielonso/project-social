@@ -199,10 +199,29 @@ export class UserService {
       if (updateUserDto.dob && updateUserDto.dob !== undefined) {
         dob = new Date(updateUserDto?.dob);
         dob.setHours(1, 0, 0, 0);
+        updateUserDto.dob = dob;
       }
-
       await this.userRepository.update(userId, {
-        ...updateUserDto,
+        ...(updateUserDto.firstName &&
+          updateUserDto.firstName !== undefined && {
+            firstName: updateUserDto.firstName,
+          }),
+        ...(updateUserDto.lastName &&
+          updateUserDto.lastName !== undefined && {
+            lastName: updateUserDto.lastName,
+          }),
+        ...(updateUserDto.username &&
+          updateUserDto.username !== undefined && {
+            username: updateUserDto.username,
+          }),
+        ...(updateUserDto.bio &&
+          updateUserDto.bio !== undefined && {
+            bio: updateUserDto.bio,
+          }),
+        ...(updateUserDto.countryCode &&
+          updateUserDto.countryCode !== undefined && {
+            countryCode: updateUserDto.countryCode,
+          }),
         ...(updateUserDto.profilePictureUrl && {
           profilePicture: updateUserDto.profilePictureUrl,
         }),

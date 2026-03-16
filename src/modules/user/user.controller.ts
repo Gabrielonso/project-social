@@ -66,7 +66,7 @@ export class UserController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Update my user data (firstName, lastName, username, bio, countryCode)',
+      'Update my user data (firstName, lastName, username, bio, countryCode, profile picture, dob)',
   })
   @ApiOkResponse({
     description: 'User successfully updated',
@@ -128,23 +128,28 @@ export class UserController {
     return this.userService.updateUserStatus(updateUserStatus, userId);
   }
 
+  @UseGuards(JwtOptionalGuard)
+  @ApiBearerAuth()
   @Get('/:userId/followers')
-  @ApiOperation({ summary: 'Get my followers' })
+  @ApiOperation({ summary: `Get a user's followers` })
   getUserFollowers(
     @Param('userId', new ParseUUIDPipe()) userId: string,
     @Req() req,
   ) {
-    const authUserId: string = req.user.id;
+    const authUserId: string = req?.user?.id;
+
     return this.followsService.getUserFollowers(userId, authUserId);
   }
 
+  @UseGuards(JwtOptionalGuard)
+  @ApiBearerAuth()
   @Get('/:userId/following')
-  @ApiOperation({ summary: 'Get users I am following' })
+  @ApiOperation({ summary: `Get a user's following` })
   getUserFollowing(
     @Param('userId', new ParseUUIDPipe()) userId: string,
     @Req() req,
   ) {
-    const authUserId: string = req.user.id;
+    const authUserId: string = req?.user?.id;
     return this.followsService.getUserFollowing(userId, authUserId);
   }
 
