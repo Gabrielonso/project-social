@@ -1,5 +1,7 @@
 import {
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,6 +13,7 @@ import { FeedType } from 'src/modules/feeds/enums/feed-type.enum';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { Post } from 'src/modules/posts/entities/post.entity';
+import { User } from 'src/modules/user/entity/user.entity';
 
 @Injectable()
 export class CommentsService {
@@ -24,9 +27,25 @@ export class CommentsService {
     try {
       return this.dataSource.transaction(async (manager) => {
         await this.validateFeedEntity(manager, dto.entity, dto.entityId);
+        const userRepo = manager.getRepository(User);
+        const user = await userRepo.findOne({
+          where: { id: userId },
+          select: ['id', 'username', 'profilePicture'],
+        });
+        if (!user) {
+          throw new HttpException(
+            {
+              statusCode: HttpStatus.NOT_FOUND,
+              message: 'User not found',
+            },
+            HttpStatus.NOT_FOUND,
+          );
+        }
         const comment = manager.create(Comment, {
           ...dto,
           userId,
+          username: user.username,
+          userAvatar: user.profilePicture,
         });
 
         await manager.save(comment);
@@ -75,14 +94,32 @@ export class CommentsService {
         }
 
         const parentId = repliedComment.parentId ?? repliedComment.id;
+        const userRepo = manager.getRepository(User);
+        const user = await userRepo.findOne({
+          where: { id: userId },
+          select: ['id', 'username', 'profilePicture'],
+        });
+        if (!user) {
+          throw new HttpException(
+            {
+              statusCode: HttpStatus.NOT_FOUND,
+              message: 'User not found',
+            },
+            HttpStatus.NOT_FOUND,
+          );
+        }
 
         await commentRepo.save({
           entity: repliedComment.entity,
           entityId: repliedComment.entityId,
           parentId,
           userId,
+          username: user.username,
+          userAvatar: user.profilePicture,
           content,
           replyToUserId: repliedComment.userId,
+          replyToUsername: repliedComment.username,
+          replyToUserAvatar: repliedComment.userAvatar,
           replyToCommentId: repliedComment.id,
         });
         if (repliedComment?.parentId) {

@@ -14,7 +14,7 @@ export class Bookmark {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'enum', enum: FeedType })
+  @Column({ type: 'enum', enum: FeedType, enumName: 'feed_type_enum' })
   entity: FeedType;
 
   @Column({ name: 'entity_id' })

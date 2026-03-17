@@ -24,6 +24,12 @@ export class Comment {
   @Column({ name: 'user_id' })
   userId: string;
 
+  @Column({ nullable: true })
+  username: string;
+
+  @Column({ name: 'user_avatar', nullable: true })
+  userAvatar?: string;
+
   @Column({ type: 'text' })
   content: string;
 
@@ -32,6 +38,12 @@ export class Comment {
 
   @Column({ name: 'reply_to_user_id', nullable: true })
   replyToUserId?: string;
+
+  @Column({ name: 'reply_to_username', nullable: true })
+  replyToUsername: string;
+
+  @Column({ name: 'reply_to_user_avatar', nullable: true })
+  replyToUserAvatar?: string;
 
   @Column({ name: 'reply_to_comment_id', nullable: true })
   replyToCommentId?: string;

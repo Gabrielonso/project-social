@@ -84,13 +84,13 @@ export class FeedService {
     const page = Number(feedFilterDto.page) || 1;
     const limit = Number(feedFilterDto.limit) || 20;
     const offset = (page - 1) * limit;
-
+    console.log(limit, offset, userId);
     const rows: RawFeedRow[] = await this.dataSource.query(
       `
       (
         SELECT
           l.entity_id AS id,
-          l.entity AS type,
+          l.entity::text AS type,
           l.created_at AS "createdAt"
         FROM likes l
         WHERE l.user_id = $3
@@ -100,7 +100,7 @@ export class FeedService {
       (
         SELECT
           b.entity_id AS id,
-          b.entity AS type,
+          b.entity::text AS type,
           b.created_at AS "createdAt"
         FROM bookmarks b
         WHERE b.user_id = $3
@@ -111,7 +111,7 @@ export class FeedService {
       `,
       [limit, offset, userId],
     );
-
+    console.log(rows);
     return this.hydrateFeed(userId, rows, page, limit);
   }
 
