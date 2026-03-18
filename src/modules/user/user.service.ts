@@ -22,6 +22,7 @@ import { customAlphabet } from 'nanoid';
 import { Follow } from 'src/modules/engagements/entities/follow.entity';
 import { Post } from 'src/modules/posts/entities/post.entity';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
+import { UserRoles } from 'src/common/enums/user-roles.constants';
 
 @Injectable()
 export class UserService {
@@ -35,54 +36,62 @@ export class UserService {
     this.nanoid = customAlphabet(alphabet, 16);
   }
 
-  async get(query: UserQueryFilterDto) {
+  async get(query: UserQueryFilterDto, authUserId?: string) {
     try {
       const page = Number(query.page) || 1;
       const limit = query.limit ? Number(query.limit) : null;
       const skip = limit ? (page - 1) * limit : 0;
-
+      console.log(query);
       const qb = this.userRepository
         .createQueryBuilder('user')
         .where('user.verified = :verified', {
           verified: true,
+        })
+        .andWhere('user.role = :role', {
+          role: UserRoles.USER,
         });
 
-      if (query.status) {
-        qb.andWhere('user.status = :status', { status: query.status });
-      }
+      // if (query.status) {
+      //   qb.andWhere('user.status = :status', { status: query.status });
+      // }
 
       if (query.search) {
         qb.andWhere(
-          '(user.firstName LIKE :search OR user.lastName LIKE :search OR user.email LIKE :search OR user.userRefId LIKE :search OR user.id LIKE :search)',
+          `(user.firstName LIKE :search 
+            OR user.lastName LIKE :search 
+            OR user.email LIKE :search 
+            OR user.userRefId LIKE :search 
+            OR CAST(user.id AS TEXT) LIKE :search 
+            OR user.username LIKE :search)`,
           { search: `%${query.search}%` },
         );
       }
-      const start = query.startDate
-        ? startOfStartDate(query.startDate)
-        : undefined;
-      const end = query.endDate ? endOfEndDate(query.endDate) : undefined;
+      // const start = query.startDate
+      //   ? startOfStartDate(query.startDate)
+      //   : undefined;
+      // const end = query.endDate ? endOfEndDate(query.endDate) : undefined;
 
-      if (query.filterBy === UserFilterByEnum.dob && start && end) {
-        const startMMDD = start.toISOString().slice(5, 10);
-        const endMMDD = end.toISOString().slice(5, 10);
-        qb.andWhere(`DATE_FORMAT(user.dob, '%m-%d') BETWEEN :start AND :end`, {
-          start: startMMDD,
-          end: endMMDD,
-        });
-      }
+      // if (query.filterBy === UserFilterByEnum.dob && start && end) {
+      //   const startMMDD = start.toISOString().slice(5, 10);
+      //   const endMMDD = end.toISOString().slice(5, 10);
+      //   qb.andWhere(`DATE_FORMAT(user.dob, '%m-%d') BETWEEN :start AND :end`, {
+      //     start: startMMDD,
+      //     end: endMMDD,
+      //   });
+      // }
 
-      if (start && query.filterBy !== UserFilterByEnum.dob) {
-        qb.andWhere('user.createdAt >= :startDate', { startDate: start });
-      }
-      if (end && query.filterBy !== UserFilterByEnum.dob) {
-        qb.andWhere('user.createdAt <= :endDate', { endDate: end });
-      }
-      if (query.filterBy === UserFilterByEnum.dob) {
-        qb.orderBy(`TO_CHAR(user.dob, 'MM-DD')`, 'ASC');
-      } else {
-        qb.orderBy('user.createdAt', 'DESC');
-      }
-
+      // if (start && query.filterBy !== UserFilterByEnum.dob) {
+      //   qb.andWhere('user.createdAt >= :startDate', { startDate: start });
+      // }
+      // if (end && query.filterBy !== UserFilterByEnum.dob) {
+      //   qb.andWhere('user.createdAt <= :endDate', { endDate: end });
+      // }
+      // if (query.filterBy === UserFilterByEnum.dob) {
+      //   qb.orderBy(`TO_CHAR(user.dob, 'MM-DD')`, 'ASC');
+      // } else {
+      //   qb.orderBy('user.createdAt', 'DESC');
+      // }
+      qb.orderBy('user.createdAt', 'DESC');
       if (limit) {
         qb.skip(skip).take(limit);
       }

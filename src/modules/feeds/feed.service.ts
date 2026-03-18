@@ -111,8 +111,43 @@ export class FeedService {
       `,
       [limit, offset, userId],
     );
-    console.log(rows);
+
     return this.hydrateFeed(userId, rows, page, limit);
+  }
+
+  async getUsersFeed(
+    userId: string,
+    feedFilterDto: FeedFilterDto,
+    authUserId?: string,
+  ) {
+    const page = Number(feedFilterDto.page) || 1;
+    const limit = Number(feedFilterDto.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const rows: RawFeedRow[] = await this.dataSource.query(
+      `
+      (
+        SELECT
+          p.id,
+          'post' AS type,
+          p.created_at AS "createdAt"
+        FROM posts p WHERE p.owner_id = $3
+      )
+      UNION ALL
+      (
+        SELECT
+          a.id,
+          'ad' AS type,
+          a.created_at AS "createdAt"
+        FROM ads a WHERE a.owner_id = $3
+      )
+      ORDER BY "createdAt" DESC
+      LIMIT $1 OFFSET $2
+      `,
+      [limit, offset, userId],
+    );
+
+    return this.hydrateFeed(authUserId, rows, page, limit);
   }
 
   async hydrateFeed(

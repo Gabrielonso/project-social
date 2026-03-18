@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -22,6 +23,8 @@ import { FeedType } from '../feeds/enums/feed-type.enum';
 import { Ad } from '../ads/entities/ads.entity';
 import { normalizeHashtags } from 'src/common/utils/hashtags.util';
 import { UpdatePostDto } from './dtos/update-post.dto';
+import { TagType } from '../engagements/enums/tag-type.enum';
+import { Tag } from '../engagements/entities/tag.entity';
 
 @Injectable()
 export class PostService {
@@ -41,6 +44,7 @@ export class PostService {
           const mediaRepo = entityManager.getRepository(Media);
           const postMediaRepo = entityManager.getRepository(PostMedia);
           const userRepo = entityManager.getRepository(User);
+          const tagRepo = entityManager.getRepository(Tag);
           const user = await userRepo.findOne({
             where: { id: userId },
             select: ['id', 'username', 'profilePicture'],
@@ -142,6 +146,37 @@ export class PostService {
           );
 
           await postMediaRepo.save(postMedias);
+
+          if (dto.tags?.length) {
+            for (const tag of dto.tags || []) {
+              if (tag.type === TagType.MENTION) {
+                if (tag.startIndex == null || tag.endIndex == null) {
+                  throw new BadRequestException(
+                    'Mentions must include startIndex and endIndex',
+                  );
+                }
+              }
+            }
+
+            const tagEntities = dto?.tags?.map((tag) => {
+              return tagRepo.create({
+                entity: FeedType.POST,
+                entityId: savedPost.id,
+                userId: tag.userId,
+                ...(tag.startIndex &&
+                  tag.startIndex != undefined && {
+                    startIndex: tag.startIndex,
+                  }),
+                ...(tag.endIndex &&
+                  tag.endIndex != undefined && {
+                    endIndex: tag.endIndex,
+                  }),
+                type: tag.type,
+              });
+            });
+
+            await tagRepo.save(tagEntities);
+          }
 
           // enqueue processing ONLY for S3 videos
           mediaEntities

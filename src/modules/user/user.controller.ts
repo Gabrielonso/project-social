@@ -26,6 +26,8 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { VerifyUsernameDto } from './dto/verify-username.dto';
 import { JwtOptionalGuard } from 'src/common/guards/jwt-optional.guard';
 import { FollowsService } from '../engagements/services/follows.services';
+import { FeedService } from '../feeds/feed.service';
+import { FeedFilterDto } from '../feeds/dtos/feed-filter.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -33,12 +35,16 @@ export class UserController {
   constructor(
     private userService: UserService,
     private readonly followsService: FollowsService,
+    private readonly feedService: FeedService,
   ) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtOptionalGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a user data' })
   @Get()
-  getUsers(@Query() userQueryDto: UserQueryFilterDto) {
-    return this.userService.get(userQueryDto);
+  getUsers(@Query() userQueryDto: UserQueryFilterDto, @Req() req) {
+    const authUserId: string = req?.user?.id;
+    return this.userService.get(userQueryDto, authUserId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -151,6 +157,21 @@ export class UserController {
   ) {
     const authUserId: string = req?.user?.id;
     return this.followsService.getUserFollowing(userId, authUserId);
+  }
+
+  @UseGuards(JwtOptionalGuard)
+  @ApiBearerAuth()
+  @Get('/:userId/feeds')
+  @ApiOperation({
+    summary: 'Get posts and ads created by a user',
+  })
+  async getUsersFeed(
+    @Query() feedFilterDto: FeedFilterDto,
+    @Req() req,
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+  ) {
+    const authUserId: string = req?.user?.id;
+    return this.feedService.getUsersFeed(userId, feedFilterDto, authUserId);
   }
 
   @Get('/verify-username')

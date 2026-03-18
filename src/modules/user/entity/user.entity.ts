@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -22,6 +23,11 @@ function generateRefId(length = 7): string {
   return id;
 }
 
+@Index('idx_user_first_name', ['firstName'])
+@Index('idx_user_last_name', ['lastName'])
+@Index('idx_user_username', ['username'])
+@Index('idx_user_email', ['email'])
+@Index('idx_user_user_ref_id', ['userRefId'])
 @Entity('users')
 export class User {
   constructor(id: string) {

@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -7,7 +8,9 @@ import {
   IsString,
   Length,
   Matches,
+  ValidateNested,
 } from 'class-validator';
+import { TagDto } from 'src/modules/engagements/dtos/tag.dto';
 
 export class UpdatePostDto {
   @ApiPropertyOptional({
@@ -58,4 +61,14 @@ export class UpdatePostDto {
   @IsString()
   @IsOptional()
   location?: string;
+
+  @ApiPropertyOptional({
+    description: 'Users tagged or mentioned in the post',
+    type: [TagDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TagDto)
+  @IsOptional()
+  tags?: TagDto[];
 }

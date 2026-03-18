@@ -35,8 +35,7 @@ export class PostController {
   @UseGuards(JwtAuthGuard)
   @Patch(':postId')
   @ApiOperation({
-    summary:
-      'Edit a post (allowed: caption, hashtags)',
+    summary: 'Edit a post (allowed: caption, hashtags, tags)',
   })
   @ApiBody({ type: UpdatePostDto })
   async updatePost(

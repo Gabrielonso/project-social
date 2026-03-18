@@ -17,6 +17,7 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MediaProvider } from 'src/modules/media/enums/media-provider.enum';
 import { MediaType } from 'src/modules/media/enums/media-type.enum';
+import { TagDto } from 'src/modules/engagements/dtos/tag.dto';
 
 class MediaDto {
   @ApiProperty({
@@ -168,7 +169,7 @@ export class CreatePostDto {
   @ApiProperty({
     description: 'Caption of post',
     example:
-      'Global Talent Hunt 2.0 is an exciting opportunity that allows talents from all over the world to have access to everything... blah blah blah',
+      'Global Talent Hunt 2.0 is an exciting opportunity that allows talents from all over the world to have access to everything... blah blah blah. Come and hangout with @peter, @james and @john',
   })
   @IsOptional()
   caption?: string;
@@ -231,4 +232,14 @@ export class CreatePostDto {
   @IsString()
   @IsOptional()
   location?: string;
+
+  @ApiPropertyOptional({
+    description: 'Users tagged or mentioned in the post',
+    type: [TagDto],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TagDto)
+  @IsOptional()
+  tags?: TagDto[];
 }

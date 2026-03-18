@@ -12,6 +12,7 @@ import { Share } from 'src/modules/engagements/entities/share.entity';
 import { Comment } from 'src/modules/engagements/entities/comment.entity';
 import { Bookmark } from 'src/modules/engagements/entities/bookmark.entity';
 import { Follow } from 'src/modules/engagements/entities/follow.entity';
+import { Tag } from 'src/modules/engagements/entities/tag.entity';
 dotenv.config();
 export const ormConfig: DataSourceOptions = {
   type: 'postgres',
@@ -41,6 +42,7 @@ export const ormConfig: DataSourceOptions = {
     Comment,
     Bookmark,
     Follow,
+    Tag,
   ],
   migrations: [],
 };
