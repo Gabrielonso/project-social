@@ -135,6 +135,9 @@ export class User {
   @Column({ type: 'text', nullable: true, select: false })
   password: string;
 
+  @Column({ name: 'social_mode', type: 'boolean', default: false })
+  socialMode: boolean;
+
   /*** Relationships ***/
 
   /*** Date Related ***/

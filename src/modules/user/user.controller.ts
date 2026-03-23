@@ -40,7 +40,7 @@ export class UserController {
 
   @UseGuards(JwtOptionalGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get a user data' })
+  @ApiOperation({ summary: 'Get users' })
   @Get()
   getUsers(@Query() userQueryDto: UserQueryFilterDto, @Req() req) {
     const authUserId: string = req?.user?.id;
@@ -172,6 +172,25 @@ export class UserController {
   ) {
     const authUserId: string = req?.user?.id;
     return this.feedService.getUsersFeed(userId, feedFilterDto, authUserId);
+  }
+
+  @UseGuards(JwtOptionalGuard)
+  @ApiBearerAuth()
+  @Get('/:userId/feeds/tagged')
+  @ApiOperation({
+    summary: 'Get posts and ads where user was tagged/mentioned',
+  })
+  async getUsersTaggedFeed(
+    @Query() feedFilterDto: FeedFilterDto,
+    @Req() req,
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+  ) {
+    const authUserId: string = req?.user?.id;
+    return this.feedService.getUsersTaggedFeed(
+      userId,
+      feedFilterDto,
+      authUserId,
+    );
   }
 
   @Get('/verify-username')

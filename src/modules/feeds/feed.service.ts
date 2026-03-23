@@ -84,7 +84,7 @@ export class FeedService {
     const page = Number(feedFilterDto.page) || 1;
     const limit = Number(feedFilterDto.limit) || 20;
     const offset = (page - 1) * limit;
-    console.log(limit, offset, userId);
+
     const rows: RawFeedRow[] = await this.dataSource.query(
       `
       (
@@ -148,6 +148,28 @@ export class FeedService {
     );
 
     return this.hydrateFeed(authUserId, rows, page, limit);
+  }
+
+  async getMyTaggedFeed(userId: string, feedFilterDto: FeedFilterDto) {
+    const page = Number(feedFilterDto.page) || 1;
+    const limit = Number(feedFilterDto.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const rows: RawFeedRow[] = await this.dataSource.query(
+      `SELECT
+          t.entity_id AS id,
+          t.entity AS type,
+          t.created_at AS "createdAt"
+        FROM tags t
+        WHERE t.user_id = $3
+          AND t.entity IN ('post', 'ad')
+      ORDER BY "createdAt" DESC
+      LIMIT $1 OFFSET $2
+      `,
+      [limit, offset, userId],
+    );
+
+    return this.hydrateFeed(userId, rows, page, limit);
   }
 
   async hydrateFeed(
@@ -266,5 +288,31 @@ export class FeedService {
       currentPage: page,
       totalPages: Math.ceil(feed.length / limit),
     });
+  }
+
+  async getUsersTaggedFeed(
+    userId: string,
+    feedFilterDto: FeedFilterDto,
+    authUserId?: string,
+  ) {
+    const page = Number(feedFilterDto.page) || 1;
+    const limit = Number(feedFilterDto.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const rows: RawFeedRow[] = await this.dataSource.query(
+      `SELECT
+          t.entity_id AS id,
+          t.entity AS type,
+          t.created_at AS "createdAt"
+        FROM tags t
+        WHERE t.user_id = $3
+          AND t.entity IN ('post', 'ad')
+      ORDER BY "createdAt" DESC
+      LIMIT $1 OFFSET $2
+      `,
+      [limit, offset, userId],
+    );
+
+    return this.hydrateFeed(authUserId, rows, page, limit);
   }
 }

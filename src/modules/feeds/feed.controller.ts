@@ -24,10 +24,7 @@ export class FeedController {
   @ApiOperation({
     summary: 'Get posts and ads created by the authenticated user',
   })
-  async getMyPublishedFeed(
-    @Query() feedFilterDto: FeedFilterDto,
-    @Req() req,
-  ) {
+  async getMyPublishedFeed(@Query() feedFilterDto: FeedFilterDto, @Req() req) {
     const userId: string = req.user.id;
     return this.feedService.getMyPublishedFeed(userId, feedFilterDto);
   }
@@ -41,5 +38,16 @@ export class FeedController {
   async getPresence(@Query() feedFilterDto: FeedFilterDto, @Req() req) {
     const userId: string = req.user.id;
     return this.feedService.getPresence(userId, feedFilterDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('tagged')
+  @ApiOperation({
+    summary: `Get posts and ads where user was tagged and mentioned`,
+  })
+  async getTaggedFeed(@Query() feedFilterDto: FeedFilterDto, @Req() req) {
+    const userId: string = req.user.id;
+    return this.feedService.getMyTaggedFeed(userId, feedFilterDto);
   }
 }
