@@ -496,4 +496,31 @@ export class UserService {
       throw error;
     }
   }
+
+  async toggleUserSocialMode(userId: string) {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.NOT_FOUND,
+            message: 'User not found',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      await this.userRepository.update(userId, {
+        socialMode: !user.socialMode,
+      });
+      return {
+        statusCode: HttpStatus.OK,
+        message: `User's social mode has been turned ${!user?.socialMode}`,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
 }

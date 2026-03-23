@@ -71,6 +71,17 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
+    summary: `Toggle my profile's social mode`,
+  })
+  @Post('/profile/toggle-social-mode')
+  toggleUserSocialMode(@Req() req) {
+    const userId = req.user.id;
+    return this.userService.toggleUserSocialMode(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
     summary:
       'Update my user data (firstName, lastName, username, bio, countryCode, profile picture, dob)',
   })
