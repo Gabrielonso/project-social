@@ -111,7 +111,34 @@ export class SoundsService {
       [limit, offset, soundId],
     );
 
-    return this.feedService.hydrateFeed(viewerId, rows, page, limit);
+    const total = await this.dataSource.query(
+      `SELECT COUNT(*) FROM ((
+        SELECT
+          p.id,
+          'post' AS type,
+          p.created_at AS "createdAt"
+        FROM posts p
+        WHERE p.sound_media_id = $1
+      )
+      UNION ALL
+      (
+        SELECT
+          a.id,
+          'ad' AS type,
+          a.created_at AS "createdAt"
+        FROM ads a
+        WHERE a.sound_media_id = $1
+      )
+      ) t`,
+      [soundId],
+    );
+
+    return this.feedService.hydrateFeed(
+      viewerId,
+      rows,
+      page,
+      limit,
+      total[0]?.count,
+    );
   }
 }
-

@@ -11,6 +11,7 @@ export class FeedController {
   constructor(private readonly feedService: FeedService) {}
 
   @UseGuards(JwtOptionalGuard)
+  @ApiBearerAuth()
   @Get('')
   @ApiOperation({ summary: 'Get Feed' })
   async getFeed(@Query() feedFilterDto: FeedFilterDto, @Req() req) {

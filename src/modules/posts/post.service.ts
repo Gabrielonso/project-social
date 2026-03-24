@@ -163,6 +163,8 @@ export class PostService {
                 entity: FeedType.POST,
                 entityId: savedPost.id,
                 userId: tag.userId,
+                username: tag.username,
+                userAvatar: tag.userAvatar,
                 ...(tag.startIndex &&
                   tag.startIndex != undefined && {
                     startIndex: tag.startIndex,

@@ -1,4 +1,13 @@
-import { IsUUID, IsEnum, IsOptional, IsNumber, Min } from 'class-validator';
+import {
+  IsUUID,
+  IsEnum,
+  IsOptional,
+  IsNumber,
+  Min,
+  IsString,
+  IsUrl,
+  IsNotEmpty,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TagType } from '../enums/tag-type.enum';
 
@@ -8,7 +17,24 @@ export class TagDto {
     example: 'uuid-of-user',
   })
   @IsUUID()
+  @IsNotEmpty()
   userId: string;
+
+  @ApiProperty({
+    description: 'Username of user being tagged or mentioned',
+    example: 'grace22',
+  })
+  @IsString()
+  username: string;
+
+  @ApiPropertyOptional({
+    description: `Avatar of user being tagged/mentioned`,
+    example: 'https://...jpg',
+  })
+  @IsUrl()
+  @IsString()
+  @IsOptional()
+  userAvatar: string;
 
   @ApiProperty({
     description: 'Type of tag',

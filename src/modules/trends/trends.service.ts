@@ -148,6 +148,34 @@ export class TrendsService {
       [limit, offset, tag],
     );
 
-    return this.feedService.hydrateFeed(viewerId, rows, page, limit);
+    const total = await this.dataSource.query(
+      `SELECT COUNT(*) FROM ((
+        SELECT
+          p.id,
+          'post' AS type,
+          p.created_at AS "createdAt"
+        FROM posts p
+        WHERE $1 = ANY(COALESCE(p.hashtags, ARRAY[]::text[]))
+      )
+      UNION ALL
+      (
+        SELECT
+          a.id,
+          'ad' AS type,
+          a.created_at AS "createdAt"
+        FROM ads a
+        WHERE $1 = ANY(COALESCE(a.hashtags, ARRAY[]::text[]))
+      )
+      ) t`,
+      [tag],
+    );
+
+    return this.feedService.hydrateFeed(
+      viewerId,
+      rows,
+      page,
+      limit,
+      total[0]?.count,
+    );
   }
 }
