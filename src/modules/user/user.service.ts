@@ -23,6 +23,7 @@ import { Follow } from 'src/modules/engagements/entities/follow.entity';
 import { Post } from 'src/modules/posts/entities/post.entity';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { UserRoles } from 'src/common/enums/user-roles.constants';
+import { UserSocialPresenceDto } from './dto/user-social-presence.dto';
 
 @Injectable()
 export class UserService {
@@ -317,7 +318,30 @@ export class UserService {
 
   async getMyUserDetails(id: string) {
     try {
-      const user = await this.userRepository.findOne({ where: { id } });
+      const user = await this.userRepository.findOne({
+        where: { id },
+        select: [
+          'firstName',
+          'lastName',
+          'username',
+          'bio',
+          'countryCode',
+          'profilePicture',
+          'email',
+          'phoneCode',
+          'phoneNumber',
+          'dob',
+          'socialMode',
+          'allowBeep',
+          'allowLiveInvite',
+          'readReceipts',
+          'profileVisitVisibility',
+          'showLastActive',
+          'audienceAccess',
+          'messagingBehaviour',
+          'visibility',
+        ],
+      });
 
       if (!user) {
         throw new HttpException(
@@ -518,6 +542,76 @@ export class UserService {
       return {
         statusCode: HttpStatus.OK,
         message: `User's social mode has been turned ${!user?.socialMode}`,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateUserSocialPresence(
+    userSocialPresenceDto: UserSocialPresenceDto,
+    userId: string,
+  ) {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.NOT_FOUND,
+            message: 'User not found',
+          },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      console.log(userSocialPresenceDto);
+      await this.userRepository.update(userId, {
+        ...(userSocialPresenceDto.audienceAccess &&
+          userSocialPresenceDto.audienceAccess !== undefined && {
+            audienceAccess: userSocialPresenceDto.audienceAccess,
+          }),
+        ...(userSocialPresenceDto.messagingBehaviour &&
+          userSocialPresenceDto.messagingBehaviour !== undefined && {
+            messagingBehaviour: userSocialPresenceDto.messagingBehaviour,
+          }),
+        ...(userSocialPresenceDto.visibility &&
+          userSocialPresenceDto.visibility !== undefined && {
+            visibility: userSocialPresenceDto.visibility,
+          }),
+        ...(userSocialPresenceDto.allowLiveInvite !== undefined && {
+          allowLiveInvite: userSocialPresenceDto.allowLiveInvite,
+        }),
+        ...(userSocialPresenceDto.allowBeep !== undefined && {
+          allowBeep: userSocialPresenceDto.allowBeep,
+        }),
+        ...(userSocialPresenceDto.readReceipts !== undefined && {
+          readReceipts: userSocialPresenceDto.readReceipts,
+        }),
+        ...(userSocialPresenceDto.profileVisitVisibility !== undefined && {
+          profileVisitVisibility: userSocialPresenceDto.profileVisitVisibility,
+        }),
+        ...(userSocialPresenceDto.showLastActive !== undefined && {
+          showLastActive: userSocialPresenceDto.showLastActive,
+        }),
+      });
+      // if (
+      //   oldUser.username !== newUser.username ||
+      //   oldUser.profilePicture !== newUser.profilePicture
+      // ) {
+      //   this.eventEmitter.emit(
+      //     'user.profile.updated',
+      //     {
+      //       userId: user.id,
+      //       username: user.username,
+      //       profilePicture: user.profilePicture,
+      //     },
+      //   );
+      // }
+
+      return {
+        statusCode: HttpStatus.OK,
+        message: 'Successfully updated user',
       };
     } catch (error) {
       throw error;

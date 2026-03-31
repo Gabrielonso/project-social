@@ -28,6 +28,7 @@ import { JwtOptionalGuard } from 'src/common/guards/jwt-optional.guard';
 import { FollowsService } from '../engagements/services/follows.services';
 import { FeedService } from '../feeds/feed.service';
 import { FeedFilterDto } from '../feeds/dtos/feed-filter.dto';
+import { UserSocialPresenceDto } from './dto/user-social-presence.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -103,6 +104,23 @@ export class UserController {
   updateMyUser(@Req() req, @Body() updateUserDto: UpdateUserDto) {
     const userId = req.user.id;
     return this.userService.update(updateUserDto, userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update user social presence',
+  })
+  @Patch('/social-presence')
+  updateMySocialPresence(
+    @Req() req,
+    @Body() updateUserSocialPresenceDto: UserSocialPresenceDto,
+  ) {
+    const userId = req.user.id;
+    return this.userService.updateUserSocialPresence(
+      updateUserSocialPresenceDto,
+      userId,
+    );
   }
 
   // @UseGuards(JwtAuthGuard)

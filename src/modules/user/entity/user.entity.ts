@@ -9,8 +9,11 @@ import {
 } from 'typeorm';
 import { randomInt } from 'crypto';
 import {
+  UserAudienceAccessOptions,
   UserCreateOptions,
+  UserMessagingBehaviourOptions,
   UserStatusEnum,
+  UserVisibilityOptions,
 } from '../interfaces/user.interfaces';
 import { UserRoles } from 'src/common/enums/user-roles.constants';
 
@@ -137,6 +140,68 @@ export class User {
 
   @Column({ name: 'social_mode', type: 'boolean', default: true })
   socialMode: boolean;
+
+  @Column({
+    name: 'allow_live_invite',
+    type: 'boolean',
+    default: true,
+    select: false,
+  })
+  allowLiveInvite: boolean;
+
+  @Column({ name: 'allow_beep', type: 'boolean', default: true, select: false })
+  allowBeep: boolean;
+
+  @Column({
+    name: 'read_receipts',
+    type: 'boolean',
+    default: true,
+    select: false,
+  })
+  readReceipts: boolean;
+
+  @Column({
+    name: 'profile_visit_visibility',
+    type: 'boolean',
+    default: true,
+    select: false,
+  })
+  profileVisitVisibility: boolean;
+
+  @Column({
+    name: 'show_last_active',
+    type: 'boolean',
+    default: true,
+    select: false,
+  })
+  showLastActive: boolean;
+
+  @Column({
+    name: 'audience_access',
+    type: 'enum',
+    enum: UserAudienceAccessOptions,
+    nullable: true,
+    default: UserAudienceAccessOptions.EVERYONE,
+  })
+  audienceAccess: UserAudienceAccessOptions;
+
+  @Column({
+    name: 'messaging_behaviour',
+    type: 'enum',
+    enum: UserMessagingBehaviourOptions,
+    nullable: true,
+    default: UserMessagingBehaviourOptions.REQUESTS_ONLY,
+  })
+  messagingBehaviour: UserMessagingBehaviourOptions;
+
+  @Column({
+    name: 'visibility',
+    type: 'enum',
+    enum: UserVisibilityOptions,
+    nullable: true,
+    default: UserVisibilityOptions.VISIBLE,
+  })
+  visibility: UserVisibilityOptions;
 
   /*** Relationships ***/
 

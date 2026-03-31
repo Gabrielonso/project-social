@@ -23,3 +23,21 @@ export enum UserCreateOptions {
   GOOGLE = 'google',
   TIKTOK = 'tiktok',
 }
+
+export enum UserAudienceAccessOptions {
+  EVERYONE = 'everyone',
+  FOLLOWERS = 'followers',
+  MUTUALS = 'mutuals',
+}
+
+export enum UserMessagingBehaviourOptions {
+  ALLOW_DMS = 'allow_dms',
+  INBOX = 'inbox',
+  REQUESTS_ONLY = 'requests_only',
+}
+
+export enum UserVisibilityOptions {
+  VISIBLE = 'visible',
+  QUIET = 'quiet',
+  PRIVATE = 'private',
+}
