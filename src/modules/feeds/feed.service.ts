@@ -392,7 +392,7 @@ export class FeedService {
           t.entity AS type,
           t.created_at AS "createdAt"
         FROM tags t
-        WHERE t.user_id = $3
+        WHERE t.user_id = $1
           AND t.entity IN ('post', 'ad')) t`,
       [userId],
     );
@@ -429,7 +429,7 @@ export class FeedService {
           t.entity AS type,
           t.created_at AS "createdAt"
         FROM tags t
-        WHERE t.user_id = $3
+        WHERE t.user_id = $1
           AND t.entity IN ('post', 'ad')) t`,
       [userId],
     );
