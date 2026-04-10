@@ -15,16 +15,17 @@ import { PostMedia } from './entities/post-media.entity';
 import { MediaStatus } from 'src/modules/media/enums/media-status.enum';
 import { MediaType } from 'src/modules/media/enums/media-type.enum';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PostFilterDto } from './dtos/posts-filter.dto';
 import { MediaUploadFolder } from 'src/modules/media/enums/media-upload-folder.enum';
 import { User } from '../user/entity/user.entity';
-import { RawFeedRow } from '../feeds/types/feed.types';
 import { FeedType } from '../feeds/enums/feed-type.enum';
 import { Ad } from '../ads/entities/ads.entity';
 import { normalizeHashtags } from 'src/common/utils/hashtags.util';
 import { UpdatePostDto } from './dtos/update-post.dto';
 import { TagType } from '../engagements/enums/tag-type.enum';
 import { Tag } from '../engagements/entities/tag.entity';
+import { AccountActivityService } from '../account-activity/account-activity.service';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationTemplates } from '../notification/notification.templates';
 
 @Injectable()
 export class PostService {
@@ -34,6 +35,8 @@ export class PostService {
     private postRepo: Repository<Post>,
     @InjectRepository(Ad)
     private adRepo: Repository<Ad>,
+    private readonly accountActivityService: AccountActivityService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async createPost(dto: CreatePostDto, userId: string) {
@@ -102,8 +105,8 @@ export class PostService {
             ownerUsername: user.username,
             ownerAvatar: user.profilePicture,
             sound: soundMedia || undefined,
-            allowComments: dto.allowComments,
-            isPublic: dto.isPublic,
+            allowComments: dto.allowComments ?? true,
+            isPublic: dto.isPublic ?? true,
             location: dto.location,
           });
           const savedPost = await postRepo.save(post);
@@ -165,11 +168,11 @@ export class PostService {
                 userId: tag.userId,
                 username: tag.username,
                 userAvatar: tag.userAvatar,
-                ...(tag.startIndex &&
+                ...(tag.startIndex != null &&
                   tag.startIndex != undefined && {
                     startIndex: tag.startIndex,
                   }),
-                ...(tag.endIndex &&
+                ...(tag.endIndex != null &&
                   tag.endIndex != undefined && {
                     endIndex: tag.endIndex,
                   }),
@@ -178,6 +181,24 @@ export class PostService {
             });
 
             await tagRepo.save(tagEntities);
+
+            const tpl = NotificationTemplates.taggedInPost({
+              taggerUsername: user.username,
+            });
+
+            const uniqueTaggedUserIds = [
+              ...new Set((dto.tags || []).map((t) => t.userId)),
+            ].filter((id) => id && id !== userId);
+
+            await Promise.all(
+              uniqueTaggedUserIds.map((taggedUserId) =>
+                this.notificationService.notifyUser({
+                  userId: taggedUserId,
+                  title: tpl.title,
+                  body: tpl.body,
+                }),
+              ),
+            );
           }
 
           // enqueue processing ONLY for S3 videos
@@ -186,13 +207,25 @@ export class PostService {
               (m) =>
                 m.provider === MediaProvider.S3 && m.type === MediaType.VIDEO,
             )
-            .forEach((m) => {
+            .forEach(() => {
               // this.mediaQueue.add('process', { mediaId: m.id });
             });
 
           // this.eventBus.publish(
           //   new PostCreatedEvent(post.id, userId),
           // );
+
+          await this.accountActivityService.log({
+            userId,
+            action: 'post.created',
+            metadata: {
+              postId: savedPost.id,
+              isPublic: savedPost.isPublic,
+              allowComments: savedPost.allowComments,
+              location: savedPost.location,
+              tagsCount: dto.tags?.length || 0,
+            },
+          });
 
           return successResponse('Successfully created post');
         },
@@ -226,6 +259,12 @@ export class PostService {
       if (dto.location !== undefined) updatePayload.location = dto.location;
 
       await this.postRepo.update({ id: postId }, updatePayload);
+
+      await this.accountActivityService.log({
+        userId,
+        action: 'post.updated',
+        metadata: { postId },
+      });
 
       return successResponse('Successfully updated post');
     } catch (error) {

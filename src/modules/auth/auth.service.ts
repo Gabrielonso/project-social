@@ -36,6 +36,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { baseUsername } from 'src/common/utils/utilityFunctions';
 import { customAlphabet } from 'nanoid';
+import { AccountActivityService } from '../account-activity/account-activity.service';
 
 @Injectable()
 export class AuthService {
@@ -47,6 +48,7 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    private readonly accountActivityService: AccountActivityService,
   ) {
     const alphabet = '0123456789';
     this.nanoid = customAlphabet(alphabet, 16);
@@ -602,7 +604,11 @@ export class AuthService {
           if (!validatePassword) {
             throw new InvalidCredentialsExceptions();
           }
-
+          await this.accountActivityService.log({
+            userId: user.id,
+            action: 'user.logged-in',
+            metadata: { userId: user.id, type: 'email-password-login' },
+          });
           const { token } = await this.getTokens(user);
           const { ...rest } = user;
           return {

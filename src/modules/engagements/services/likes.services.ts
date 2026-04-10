@@ -6,6 +6,9 @@ import { FeedType } from 'src/modules/feeds/enums/feed-type.enum';
 import { Post } from 'src/modules/posts/entities/post.entity';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { successResponse } from 'src/common/helpers/response.helper';
+import { NotificationService } from 'src/modules/notification/notification.service';
+import { User } from 'src/modules/user/entity/user.entity';
+import { NotificationTemplates } from 'src/modules/notification/notification.templates';
 
 @Injectable()
 export class LikesService {
@@ -13,6 +16,7 @@ export class LikesService {
     @InjectRepository(Like)
     private readonly likeRepo: Repository<Like>,
     private readonly dataSource: DataSource,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async toggleLike(entity: FeedType, entityId: string, userId: string) {
@@ -36,6 +40,28 @@ export class LikesService {
 
         await manager.save(like);
         await this.incrementCounter(manager, entity, entityId);
+
+        if (entity === FeedType.POST) {
+          const post = await manager.getRepository(Post).findOne({
+            where: { id: entityId },
+            select: ['id', 'ownerId'],
+          });
+
+          if (post?.ownerId && post.ownerId !== userId) {
+            const liker = await manager.getRepository(User).findOne({
+              where: { id: userId },
+              select: ['id', 'username'],
+            });
+            const tpl = NotificationTemplates.postLiked({
+              likerUsername: liker?.username,
+            });
+            await this.notificationService.notifyUser({
+              userId: post.ownerId,
+              title: tpl.title,
+              body: tpl.body,
+            });
+          }
+        }
 
         message = `Successfully liked this ${entity}`;
       }

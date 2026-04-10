@@ -104,7 +104,7 @@ export class AuthController {
     @Body() changePasswordDto: ChangePasswordDto,
     @Req() req,
   ) {
-    const userId = req.user.sub;
+    const userId = req.user.id;
     return this.authService.changePassword(userId, changePasswordDto);
   }
 }

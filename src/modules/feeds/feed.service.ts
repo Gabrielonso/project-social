@@ -199,6 +199,7 @@ export class FeedService {
           'post' AS type,
           p.created_at AS "createdAt"
         FROM posts p
+        WHERE p.is_public = true
       )
       UNION ALL
       (
@@ -216,7 +217,7 @@ export class FeedService {
 
     const total = await this.dataSource.query(
       `SELECT COUNT(*) FROM (
-  SELECT id FROM posts
+  SELECT id FROM posts WHERE is_public = true
   UNION ALL
   SELECT id FROM ads
 ) t`,
@@ -332,6 +333,7 @@ export class FeedService {
     const page = Number(feedFilterDto.page) || 1;
     const limit = Number(feedFilterDto.limit) || 20;
     const offset = (page - 1) * limit;
+    const canViewAllPosts = authUserId && authUserId === userId;
 
     const rows: RawFeedRow[] = await this.dataSource.query(
       `
@@ -340,7 +342,9 @@ export class FeedService {
           p.id,
           'post' AS type,
           p.created_at AS "createdAt"
-        FROM posts p WHERE p.owner_id = $3
+        FROM posts p
+        WHERE p.owner_id = $3
+          AND ($4::boolean = true OR p.is_public = true)
       )
       UNION ALL
       (
@@ -353,15 +357,15 @@ export class FeedService {
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
       `,
-      [limit, offset, userId],
+      [limit, offset, userId, canViewAllPosts],
     );
     const total = await this.dataSource.query(
       `SELECT COUNT(*) FROM (
-  SELECT id FROM posts WHERE owner_id = $1
+  SELECT id FROM posts WHERE owner_id = $1 AND ($2::boolean = true OR is_public = true)
   UNION ALL
   SELECT id FROM ads WHERE owner_id = $1
 ) t`,
-      [userId],
+      [userId, canViewAllPosts],
     );
 
     return this.hydrateFeed(authUserId, rows, page, limit, total[0]?.count);
@@ -380,6 +384,15 @@ export class FeedService {
         FROM tags t
         WHERE t.user_id = $3
           AND t.entity IN ('post', 'ad')
+          AND (
+            t.entity <> 'post'
+            OR EXISTS (
+              SELECT 1
+              FROM posts p
+              WHERE p.id = t.entity_id
+                AND p.is_public = true
+            )
+          )
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
       `,
@@ -393,7 +406,17 @@ export class FeedService {
           t.created_at AS "createdAt"
         FROM tags t
         WHERE t.user_id = $1
-          AND t.entity IN ('post', 'ad')) t`,
+          AND t.entity IN ('post', 'ad')
+          AND (
+            t.entity <> 'post'
+            OR EXISTS (
+              SELECT 1
+              FROM posts p
+              WHERE p.id = t.entity_id
+                AND p.is_public = true
+            )
+          )
+          ) t`,
       [userId],
     );
 
@@ -417,6 +440,15 @@ export class FeedService {
         FROM tags t
         WHERE t.user_id = $3
           AND t.entity IN ('post', 'ad')
+          AND (
+            t.entity <> 'post'
+            OR EXISTS (
+              SELECT 1
+              FROM posts p
+              WHERE p.id = t.entity_id
+                AND p.is_public = true
+            )
+          )
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
       `,
@@ -430,7 +462,17 @@ export class FeedService {
           t.created_at AS "createdAt"
         FROM tags t
         WHERE t.user_id = $1
-          AND t.entity IN ('post', 'ad')) t`,
+          AND t.entity IN ('post', 'ad')
+          AND (
+            t.entity <> 'post'
+            OR EXISTS (
+              SELECT 1
+              FROM posts p
+              WHERE p.id = t.entity_id
+                AND p.is_public = true
+            )
+          )
+          ) t`,
       [userId],
     );
 

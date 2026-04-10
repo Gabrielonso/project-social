@@ -16,7 +16,7 @@ export class SoundFilterDto {
     required: false,
     type: String,
     description: 'Filter usage to this date (inclusive)',
-    example: '2025-12-31',
+    example: '2026-12-31',
   })
   @IsDateString()
   @IsOptional()
@@ -42,4 +42,3 @@ export class SoundFilterDto {
   @IsNumberString()
   limit: number;
 }
-

@@ -4,19 +4,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { successResponse } from 'src/common/helpers/response.helper';
 import { UpdateUserDto, UpdateUserStatusDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { DataSource, IsNull, Repository } from 'typeorm';
 import { User } from './entity/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { UserFilterByEnum } from './interfaces/user.interfaces';
 import { UserQueryFilterDto } from './dto/user-query-filter.dto';
-import {
-  baseUsername,
-  endOfEndDate,
-  startOfStartDate,
-} from 'src/common/utils/utilityFunctions';
+import { baseUsername } from 'src/common/utils/utilityFunctions';
 import { hash } from 'bcryptjs';
 import { customAlphabet } from 'nanoid';
 import { Follow } from 'src/modules/engagements/entities/follow.entity';
@@ -24,6 +20,7 @@ import { Post } from 'src/modules/posts/entities/post.entity';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { UserRoles } from 'src/common/enums/user-roles.constants';
 import { UserSocialPresenceDto } from './dto/user-social-presence.dto';
+import { AccountActivityService } from '../account-activity/account-activity.service';
 
 @Injectable()
 export class UserService {
@@ -32,6 +29,7 @@ export class UserService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private readonly dataSource: DataSource,
+    private readonly accountActivityService: AccountActivityService,
   ) {
     const alphabet = '0123456789';
     this.nanoid = customAlphabet(alphabet, 16);
@@ -99,16 +97,11 @@ export class UserService {
 
       const [data, total] = await qb.getManyAndCount();
 
-      return {
-        statusCode: HttpStatus.OK,
-        message: 'Operation successful',
-        data: {
-          data,
-          total,
-          currentPage: page,
-          totalPages: limit ? Math.ceil(total / limit) : 1,
-        },
-      };
+      return successResponse('Operation Successful', {
+        data,
+        currentPage: page,
+        totalPages: limit ? Math.ceil(total / limit) : 1,
+      });
     } catch (error) {
       throw error;
     }
@@ -239,6 +232,14 @@ export class UserService {
           updateUserDto.dob !== undefined && {
             dob,
           }),
+      });
+
+      await this.accountActivityService.log({
+        userId,
+        action: 'user.profile.updated',
+        metadata: {
+          fields: Object.keys(updateUserDto || {}),
+        },
       });
       // if (
       //   oldUser.username !== newUser.username ||
@@ -539,6 +540,12 @@ export class UserService {
       await this.userRepository.update(userId, {
         socialMode: !user.socialMode,
       });
+
+      await this.accountActivityService.log({
+        userId,
+        action: 'user.social-mode.toggled',
+        metadata: { enabled: !user.socialMode },
+      });
       return {
         statusCode: HttpStatus.OK,
         message: `User's social mode has been turned ${!user?.socialMode}`,
@@ -594,6 +601,14 @@ export class UserService {
         ...(userSocialPresenceDto.showLastActive !== undefined && {
           showLastActive: userSocialPresenceDto.showLastActive,
         }),
+      });
+
+      await this.accountActivityService.log({
+        userId,
+        action: 'user.social-presence.updated',
+        metadata: {
+          fields: Object.keys(userSocialPresenceDto || {}),
+        },
       });
       // if (
       //   oldUser.username !== newUser.username ||

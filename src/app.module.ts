@@ -17,10 +17,24 @@ import { EngagementsModule } from './modules/engagements/engagements.module';
 import { RelationshipsModule } from './modules/relationships/relationships.module';
 import { TrendsModule } from './modules/trends/trends.module';
 import { SoundsModule } from './modules/sounds/sounds.module';
+import { AccountActivityModule } from './modules/account-activity/account-activity.module';
+import { BullModule } from '@nestjs/bullmq';
+import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('REDIS_HOST'),
+          port: Number(configService.get<string>('REDIS_PORT') || 6379),
+          password: configService.get<string>('REDIS_PASSWORD') || undefined,
+          username: configService.get<string>('REDIS_USERNAME') || undefined,
+        },
+      }),
+    }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: () => ormConfig,
@@ -38,6 +52,8 @@ import { SoundsModule } from './modules/sounds/sounds.module';
     RelationshipsModule,
     TrendsModule,
     SoundsModule,
+    AccountActivityModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

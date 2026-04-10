@@ -16,7 +16,7 @@ export class FeedFilterDto {
     required: false,
     type: String,
     description: 'Filter/Search to Date',
-    example: '2025-12-31',
+    example: '2026-12-31',
   })
   @IsDateString()
   @IsOptional()

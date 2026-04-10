@@ -29,6 +29,7 @@ import { FollowsService } from '../engagements/services/follows.services';
 import { FeedService } from '../feeds/feed.service';
 import { FeedFilterDto } from '../feeds/dtos/feed-filter.dto';
 import { UserSocialPresenceDto } from './dto/user-social-presence.dto';
+import { AccountActivityService } from '../account-activity/account-activity.service';
 
 @ApiTags('Users')
 @Controller('users')
@@ -37,6 +38,7 @@ export class UserController {
     private userService: UserService,
     private readonly followsService: FollowsService,
     private readonly feedService: FeedService,
+    private readonly accountActivityService: AccountActivityService,
   ) {}
 
   @UseGuards(JwtOptionalGuard)
@@ -67,6 +69,19 @@ export class UserController {
   getMyUser(@Req() req) {
     const userId = req.user.id;
     return this.userService.getMyUserDetails(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get my account activity' })
+  @Get('/profile/activity')
+  getMyAccountActivity(@Req() req, @Query() feedFilterDto: FeedFilterDto) {
+    const userId = req.user.id;
+    return this.accountActivityService.getMyActivities(
+      userId,
+      Number(feedFilterDto.page) || 1,
+      Number(feedFilterDto.limit) || 20,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -169,11 +184,16 @@ export class UserController {
   @ApiOperation({ summary: `Get a user's followers` })
   getUserFollowers(
     @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Query() feedFilterDto: FeedFilterDto,
     @Req() req,
   ) {
     const authUserId: string = req?.user?.id;
 
-    return this.followsService.getUserFollowers(userId, authUserId);
+    return this.followsService.getUserFollowers(
+      userId,
+      feedFilterDto,
+      authUserId,
+    );
   }
 
   @UseGuards(JwtOptionalGuard)
@@ -182,10 +202,15 @@ export class UserController {
   @ApiOperation({ summary: `Get a user's following` })
   getUserFollowing(
     @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Query() feedFilterDto: FeedFilterDto,
     @Req() req,
   ) {
     const authUserId: string = req?.user?.id;
-    return this.followsService.getUserFollowing(userId, authUserId);
+    return this.followsService.getUserFollowing(
+      userId,
+      feedFilterDto,
+      authUserId,
+    );
   }
 
   @UseGuards(JwtOptionalGuard)

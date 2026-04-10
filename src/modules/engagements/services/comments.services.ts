@@ -14,6 +14,8 @@ import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { Post } from 'src/modules/posts/entities/post.entity';
 import { User } from 'src/modules/user/entity/user.entity';
+import { NotificationService } from 'src/modules/notification/notification.service';
+import { NotificationTemplates } from 'src/modules/notification/notification.templates';
 
 @Injectable()
 export class CommentsService {
@@ -21,6 +23,7 @@ export class CommentsService {
     @InjectRepository(Comment)
     private readonly commentRepo: Repository<Comment>,
     private readonly dataSource: DataSource,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async createComment(dto: CreateCommentDto, userId: string) {
@@ -51,6 +54,24 @@ export class CommentsService {
         await manager.save(comment);
 
         await this.incrementCommentCounter(manager, dto.entity, dto.entityId);
+
+        if (dto.entity === FeedType.POST) {
+          const post = await manager.getRepository(Post).findOne({
+            where: { id: dto.entityId },
+            select: ['id', 'ownerId'],
+          });
+
+          if (post?.ownerId && post.ownerId !== userId) {
+            const tpl = NotificationTemplates.postCommented({
+              commenterUsername: user.username,
+            });
+            await this.notificationService.notifyUser({
+              userId: post.ownerId,
+              title: tpl.title,
+              body: tpl.body,
+            });
+          }
+        }
 
         return successResponse(`Successfully commented on ${dto.entity}`);
       });
