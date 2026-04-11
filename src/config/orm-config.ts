@@ -16,6 +16,7 @@ import { Tag } from 'src/modules/engagements/entities/tag.entity';
 import { Block } from 'src/modules/engagements/entities/block.entity';
 import { AccountActivity } from 'src/modules/account-activity/entities/account-activity.entity';
 import { Notification } from 'src/modules/notification/entity/notification.entity';
+import { Thought } from 'src/modules/thought/entities/thought.entity';
 dotenv.config();
 export const ormConfig: DataSourceOptions = {
   type: 'postgres',
@@ -49,6 +50,7 @@ export const ormConfig: DataSourceOptions = {
     Block,
     AccountActivity,
     Notification,
+    Thought,
   ],
   migrations: [],
 };

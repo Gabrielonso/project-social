@@ -20,6 +20,7 @@ import { SoundsModule } from './modules/sounds/sounds.module';
 import { AccountActivityModule } from './modules/account-activity/account-activity.module';
 import { BullModule } from '@nestjs/bullmq';
 import { NotificationModule } from './modules/notification/notification.module';
+import { ThoughtModule } from './modules/thought/thought.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     SoundsModule,
     AccountActivityModule,
     NotificationModule,
+    ThoughtModule,
   ],
   controllers: [AppController],
   providers: [AppService],

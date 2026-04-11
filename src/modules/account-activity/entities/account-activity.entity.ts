@@ -15,13 +15,13 @@ export class AccountActivity {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ type: 'varchar', length: 120 })
+  @Column({ type: 'text', nullable: true })
   action: string;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
 
-  @Column({ name: 'ip_address', type: 'varchar', length: 64, nullable: true })
+  @Column({ name: 'ip_address', type: 'text', nullable: true })
   ipAddress?: string;
 
   @Column({ name: 'user_agent', type: 'text', nullable: true })

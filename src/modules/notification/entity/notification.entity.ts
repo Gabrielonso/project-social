@@ -13,10 +13,10 @@ export class Notification {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'text', nullable: true })
   title: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'text', nullable: true })
   body: string;
 
   @Column({ type: 'boolean', nullable: true, default: false, select: false })
