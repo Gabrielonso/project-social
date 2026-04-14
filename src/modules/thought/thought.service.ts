@@ -72,7 +72,11 @@ export class ThoughtService {
     }
   }
 
-  async updatePost(thoughtId: string, dto: UpdateThoughtDto, userId: string) {
+  async updateThought(
+    thoughtId: string,
+    dto: UpdateThoughtDto,
+    userId: string,
+  ) {
     try {
       const thought = await this.thoughtRepo.findOne({
         where: { id: thoughtId },
@@ -170,5 +174,37 @@ export class ThoughtService {
       currentPage: page,
       totalPages: Math.ceil(ttl / limit),
     });
+  }
+
+  async deleteThought(thoughtId: string, userId: string) {
+    try {
+      const thought = await this.thoughtRepo.findOne({
+        where: { id: thoughtId },
+      });
+      if (!thought) {
+        throw new HttpException(
+          { statusCode: HttpStatus.NOT_FOUND, message: 'Thought not found' },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      if (thought.ownerId !== userId) {
+        throw new ForbiddenException(
+          'You are not allowed to delete this thought',
+        );
+      }
+
+      await this.thoughtRepo.delete({ id: thoughtId });
+
+      await this.accountActivityService.log({
+        userId,
+        action: 'thought.deleted',
+        metadata: { thoughtId },
+      });
+
+      return successResponse('Successfully deleted thought');
+    } catch (error) {
+      throw error;
+    }
   }
 }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -55,4 +56,12 @@ export class PostController {
   //   const userId: string = req.user.id;
   //   return this.postService.getMyPostFeeds(postFilterDto, userId);
   // }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':postId')
+  @ApiOperation({ summary: 'Delete a post' })
+  deleteUser(@Param('postId', new ParseUUIDPipe()) postId: string, @Req() req) {
+    const userId: string = req.user.id;
+    return this.postService.deletePost(postId, userId);
+  }
 }

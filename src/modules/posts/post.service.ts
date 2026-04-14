@@ -422,4 +422,51 @@ export class PostService {
   //     totalPages: Math.ceil(feed.length / limit),
   //   });
   // }
+
+  async deletePost(postId: string, userId: string) {
+    try {
+      return await this.dataSource.manager.transaction(
+        async (entityManager) => {
+          const postRepo = entityManager.getRepository(Post);
+          const mediaRepo = entityManager.getRepository(Media);
+          const postMediaRepo = entityManager.getRepository(PostMedia);
+          const tagRepo = entityManager.getRepository(Tag);
+          const post = await postRepo.findOne({ where: { id: postId } });
+          if (!post) {
+            throw new HttpException(
+              { statusCode: HttpStatus.NOT_FOUND, message: 'Post not found' },
+              HttpStatus.NOT_FOUND,
+            );
+          }
+
+          if (post.ownerId !== userId) {
+            throw new ForbiddenException(
+              'You are not allowed to delete this post',
+            );
+          }
+
+          const postMedias = await postMediaRepo.find({
+            where: { post: { id: postId } },
+          });
+          for (const postMedia of postMedias) {
+            await mediaRepo.delete({ id: postMedia.media.id });
+            await postMediaRepo.delete({ id: postMedia.id });
+          }
+
+          await postRepo.delete({ id: postId });
+
+          await tagRepo.delete({ entity: FeedType.POST, entityId: postId });
+          await this.accountActivityService.log({
+            userId,
+            action: 'post.deleted',
+            metadata: { postId },
+          });
+
+          return successResponse('Successfully deleted post');
+        },
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
 }

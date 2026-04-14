@@ -13,7 +13,6 @@ export class PostMedia {
   post: Post;
 
   @ManyToOne(() => Media, {
-    onDelete: 'CASCADE',
     cascade: true,
     eager: true,
   })

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -44,7 +45,7 @@ export class ThoughtController {
     @Req() req,
   ) {
     const userId: string = req.user.id;
-    return this.thoughtService.updatePost(thoughtId, dto, userId);
+    return this.thoughtService.updateThought(thoughtId, dto, userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -57,5 +58,16 @@ export class ThoughtController {
   ) {
     const userId: string = req.user.id;
     return this.thoughtService.getMyThoughts(userId, thoughtsFilterDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':thoughtId')
+  @ApiOperation({ summary: 'Delete a thought' })
+  deleteUser(
+    @Param('thoughtId', new ParseUUIDPipe()) thoughtId: string,
+    @Req() req,
+  ) {
+    const userId: string = req.user.id;
+    return this.thoughtService.deleteThought(thoughtId, userId);
   }
 }
