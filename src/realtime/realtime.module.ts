@@ -9,6 +9,7 @@ import { AccountActivityService } from 'src/modules/account-activity/account-act
 import { AccountActivity } from 'src/modules/account-activity/entities/account-activity.entity';
 import { EventBus } from 'src/events/event-bus.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PresenceService } from './services/presence.service';
 
 @Module({
   imports: [JwtModule, TypeOrmModule.forFeature([User, AccountActivity])],
@@ -19,6 +20,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
     AccountActivityService,
     EventBus,
     EventEmitter2,
+    PresenceService,
   ],
   exports: [WsGateway],
 })

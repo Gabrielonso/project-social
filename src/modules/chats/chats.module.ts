@@ -16,6 +16,8 @@ import { User } from '../user/entity/user.entity';
 import { AccountActivityModule } from '../account-activity/account-activity.module';
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatController } from './chat.controller';
+import { MessageReceipt } from './entities/message-receipt.entity';
+import { PresenceService } from 'src/realtime/services/presence.service';
 
 @Module({
   providers: [
@@ -26,9 +28,16 @@ import { ChatController } from './chat.controller';
     AuthService,
     EventBus,
     UserService,
+    PresenceService,
   ],
   imports: [
-    TypeOrmModule.forFeature([Chat, ChatParticipant, User, ChatMessage]),
+    TypeOrmModule.forFeature([
+      Chat,
+      ChatParticipant,
+      User,
+      ChatMessage,
+      MessageReceipt,
+    ]),
     AccountActivityModule,
   ],
   controllers: [ChatController],

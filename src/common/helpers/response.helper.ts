@@ -7,6 +7,16 @@ export interface ApiResponse<T = any> {
   error?: any;
 }
 
+export type WsResponse<T = any> = {
+  success: boolean;
+  event: string;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+};
+
 export function successResponse<T = undefined>(
   message: string,
   data?: T,
@@ -22,4 +32,20 @@ export function successResponse<T = undefined>(
   }
 
   return response;
+}
+
+export function wsSuccess(event: string, data: any): WsResponse {
+  return { success: true, event, data };
+}
+
+export function wsFailure(
+  event: string,
+  code: string,
+  message: string,
+): WsResponse {
+  return {
+    success: false,
+    event,
+    error: { code, message },
+  };
 }

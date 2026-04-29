@@ -31,6 +31,9 @@ export class ChatParticipant {
   // @Column({ name: 'unread_count', default: 0 })
   // unreadCount: number;
 
+  @Column({ name: 'last_seen_message_id', nullable: true })
+  lastSeenMessageId: string;
+
   @CreateDateColumn({ name: 'joined_at' })
   joinedAt: Date;
 
