@@ -4,6 +4,7 @@ import {
   DeleteDateColumn,
   Entity,
   Index,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -16,6 +17,7 @@ import {
   UserVisibilityOptions,
 } from '../interfaces/user.interfaces';
 import { UserRoles } from 'src/common/enums/user-roles.constants';
+import { ChatParticipant } from 'src/modules/chats/entities/chat-participant.entity';
 
 const ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 function generateRefId(length = 7): string {
@@ -204,6 +206,9 @@ export class User {
   visibility: UserVisibilityOptions;
 
   /*** Relationships ***/
+
+  @OneToMany(() => ChatParticipant, (p) => p.user)
+  chatParticipants: ChatParticipant[];
 
   /*** Date Related ***/
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })

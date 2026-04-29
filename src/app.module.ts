@@ -21,6 +21,9 @@ import { AccountActivityModule } from './modules/account-activity/account-activi
 import { BullModule } from '@nestjs/bullmq';
 import { NotificationModule } from './modules/notification/notification.module';
 import { ThoughtModule } from './modules/thought/thought.module';
+import { ChatsModule } from './modules/chats/chats.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -56,6 +59,9 @@ import { ThoughtModule } from './modules/thought/thought.module';
     AccountActivityModule,
     NotificationModule,
     ThoughtModule,
+    ChatsModule,
+    RealtimeModule,
+    EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],

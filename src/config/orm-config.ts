@@ -17,6 +17,9 @@ import { Block } from 'src/modules/engagements/entities/block.entity';
 import { AccountActivity } from 'src/modules/account-activity/entities/account-activity.entity';
 import { Notification } from 'src/modules/notification/entity/notification.entity';
 import { Thought } from 'src/modules/thought/entities/thought.entity';
+import { ChatMessage } from 'src/modules/chats/entities/chat-message.entity';
+import { Chat } from 'src/modules/chats/entities/chat.entity';
+import { ChatParticipant } from 'src/modules/chats/entities/chat-participant.entity';
 dotenv.config();
 export const ormConfig: DataSourceOptions = {
   type: 'postgres',
@@ -51,6 +54,9 @@ export const ormConfig: DataSourceOptions = {
     AccountActivity,
     Notification,
     Thought,
+    ChatMessage,
+    Chat,
+    ChatParticipant,
   ],
   migrations: [],
 };

@@ -389,7 +389,7 @@ export class FeedService {
             OR EXISTS (
               SELECT 1
               FROM posts p
-              WHERE p.id = t.entity_id
+              WHERE p.id = t.entity_id::uuid
                 AND p.is_public = true
             )
           )
@@ -412,7 +412,7 @@ export class FeedService {
             OR EXISTS (
               SELECT 1
               FROM posts p
-              WHERE p.id = t.entity_id
+              WHERE p.id = t.entity_id::uuid
                 AND p.is_public = true
             )
           )
@@ -445,7 +445,7 @@ export class FeedService {
             OR EXISTS (
               SELECT 1
               FROM posts p
-              WHERE p.id = t.entity_id
+              WHERE p.id = t.entity_id::uuid
                 AND p.is_public = true
             )
           )
@@ -468,7 +468,7 @@ export class FeedService {
             OR EXISTS (
               SELECT 1
               FROM posts p
-              WHERE p.id = t.entity_id
+              WHERE p.id = t.entity_id::uuid
                 AND p.is_public = true
             )
           )
