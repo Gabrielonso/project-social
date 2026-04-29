@@ -77,10 +77,10 @@ export class ChatMessageListener {
       });
 
       // 🔥 5. Notify chat room (for active users)
-      // this.wsGateway.emitToRoom(`chat:${chatId}`, 'chat.new_message', {
-      //   success: true,
-      //   data: message,
-      // });
+      this.wsGateway.emitToRoom(`chat:${chatId}`, 'chat.new_message', {
+        success: true,
+        data: message,
+      });
     } catch (error: unknown) {
       console.error('Message failed:', error);
 
