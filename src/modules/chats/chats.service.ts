@@ -172,4 +172,15 @@ export class ChatsService {
       throw error;
     }
   }
+
+  async getChatParticipants(chatId: string) {
+    try {
+      const participants = this.chatParticipantRepo.find({
+        where: { chatId },
+      });
+      return participants;
+    } catch (error) {
+      throw error;
+    }
+  }
 }

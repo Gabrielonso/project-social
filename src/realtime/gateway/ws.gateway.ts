@@ -69,7 +69,7 @@ export class WsGateway implements OnGatewayConnection {
     socket.join(`chat:${chatId}`);
   }
 
-  //   @UseGuards(WsAuthGuard)
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage('chat.send_message')
   send(@MessageBody() payload: any, @CurrentUser() user: Auth) {
     this.eventBus.emit('chat.send_message', {

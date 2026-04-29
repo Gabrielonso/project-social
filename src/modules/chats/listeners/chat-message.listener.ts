@@ -16,7 +16,7 @@ export class ChatMessageListener {
     try {
       let chatId = payload.chatId;
 
-      // 👇 If chatId not provided → create/find chat
+      // 🔥 1. Create or get chat if needed
       if (!chatId && payload.receiverUserId) {
         const chat = await this.chatService.getOrCreateOneToOneChat(
           payload.userId,
@@ -26,25 +26,32 @@ export class ChatMessageListener {
         chatId = chat.id;
       }
 
+      if (!chatId) {
+        throw new Error('ChatId could not be resolved');
+      }
+
+      // 🔥 2. Create message
       const message = await this.chatService.createMessage({
         ...payload,
         chatId,
       });
 
-      if (!payload?.chatId) {
-        this.wsGateway.emitToUser(
-          `${payload.receiverUserId}`,
-          'chat.new_message',
-          message,
-        );
-      } else {
-        this.wsGateway.emitToRoom(
-          `chat:${chatId}`,
-          'chat.new_message',
-          message,
-        );
+      // 🔥 3. Get REAL participants from DB
+      const participants = await this.chatService.getChatParticipants(chatId);
+
+      // 🔥 4. Notify each participant (EXCEPT sender)
+      for (const participant of participants) {
+        const userId = participant.userId;
+
+        if (userId === payload.userId) continue;
+
+        this.wsGateway.emitToUser(userId, 'chat.new_message', message);
       }
+
+      // 🔥 5. Notify chat room (for active users)
+      this.wsGateway.emitToRoom(`chat:${chatId}`, 'chat.new_message', message);
     } catch (error) {
+      console.error('ChatMessageListener error:', error);
       throw error;
     }
   }
