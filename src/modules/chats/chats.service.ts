@@ -95,7 +95,6 @@ export class ChatsService {
             { id: data.chatId },
             {
               lastMessageId: message.id,
-              lastMessage: { id: message.id },
             },
           );
 
