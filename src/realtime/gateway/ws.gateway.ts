@@ -5,6 +5,7 @@ import {
   SubscribeMessage,
   MessageBody,
   ConnectedSocket,
+  Ack,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -90,31 +91,26 @@ export class WsGateway implements OnGatewayConnection {
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('chat.send_message')
-  send(@MessageBody() payload: CreateMessageDto, @CurrentUser() user: Auth) {
+  send(
+    @MessageBody() payload: CreateMessageDto,
+    @CurrentUser() user: Auth,
+    @Ack() ack: (response: any) => void,
+  ) {
     try {
-      console.log(
-        {
-          ...payload,
-          userId: user.id,
-        },
-        'On send before evemnt bus',
-      );
       this.eventBus.emit('chat.send_message', {
         ...payload,
         userId: user.id,
       });
-      return wsSuccess('chat.send_message_ack', {
-        tempId: payload.tempId, // frontend-generated id
-      });
+      ack(
+        wsSuccess('chat.send_message_ack', {
+          tempId: payload.tempId, // frontend-generated id
+        }),
+      );
     } catch (error) {
       console.log(error);
       const errorCodeMesssage =
         error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-      return wsFailure(
-        'chat.send_message_ack',
-        'SEND_FAILED',
-        errorCodeMesssage,
-      );
+      ack(wsFailure('chat.send_message_ack', 'SEND_FAILED', errorCodeMesssage));
     }
   }
 
@@ -132,19 +128,25 @@ export class WsGateway implements OnGatewayConnection {
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('chat.read')
-  read(@MessageBody() payload: { chatId: string }, @CurrentUser() user: Auth) {
+  read(
+    @MessageBody() payload: { chatId: string },
+    @CurrentUser() user: Auth,
+    @Ack() ack: (response: any) => void,
+  ) {
     try {
       this.eventBus.emit('chat.read', {
         ...payload,
         userId: user.id,
       });
-      return wsSuccess('chat.read_ack', {
-        tempId: '', // frontend-generated id
-      });
+      ack(
+        wsSuccess('chat.read_ack', {
+          tempId: '', // frontend-generated id
+        }),
+      );
     } catch (error) {
       const errorCodeMesssage =
         error instanceof Error ? error.message : 'UNKNOWN_ERROR';
-      return wsFailure('chat.read_ack', 'READ_CHAT_FAILED', errorCodeMesssage);
+      ack(wsFailure('chat.read_ack', 'READ_CHAT_FAILED', errorCodeMesssage));
     }
   }
 
