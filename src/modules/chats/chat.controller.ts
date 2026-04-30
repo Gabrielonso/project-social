@@ -30,7 +30,7 @@ export class ChatController {
 
   @UseGuards(JwtAuthGuard)
   @Get('messages')
-  @ApiOperation({ summary: 'Get a chat messages' })
+  @ApiOperation({ summary: 'Get chat messages' })
   @ApiBearerAuth()
   async getChatMessages(
     @Req() req,
