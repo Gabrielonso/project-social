@@ -29,19 +29,14 @@ export class ChatController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get(':chatId/messages')
+  @Get('messages')
   @ApiOperation({ summary: 'Get a chat messages' })
   @ApiBearerAuth()
   async getChatMessages(
     @Req() req,
     @Query() chatMessagesFilterDto: ChatMessagesFilterDto,
-    @Param('chatId', ParseUUIDPipe) chatId: string,
   ) {
     const userId: string = req.user.id;
-    return this.chatService.getChatMessages(
-      userId,
-      chatId,
-      chatMessagesFilterDto,
-    );
+    return this.chatService.getChatMessages(userId, chatMessagesFilterDto);
   }
 }

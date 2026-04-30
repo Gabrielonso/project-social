@@ -16,6 +16,7 @@ import { WsAuthGuard } from '../guards/ws-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { wsFailure, wsSuccess } from 'src/common/helpers/response.helper';
 import { PresenceService } from '../services/presence.service';
+import { CreateMessageDto } from 'src/modules/chats/dtos/create-message.dto';
 
 @WebSocketGateway({
   cors: {
@@ -89,16 +90,24 @@ export class WsGateway implements OnGatewayConnection {
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('chat.send_message')
-  send(@MessageBody() payload: any, @CurrentUser() user: Auth) {
+  send(@MessageBody() payload: CreateMessageDto, @CurrentUser() user: Auth) {
     try {
+      console.log(
+        {
+          ...payload,
+          userId: user.id,
+        },
+        'On send before evemnt bus',
+      );
       this.eventBus.emit('chat.send_message', {
         ...payload,
         userId: user.id,
       });
       return wsSuccess('chat.send_message_ack', {
-        tempId: '', // frontend-generated id
+        tempId: payload.tempId, // frontend-generated id
       });
     } catch (error) {
+      console.log(error);
       const errorCodeMesssage =
         error instanceof Error ? error.message : 'UNKNOWN_ERROR';
       return wsFailure(

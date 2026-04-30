@@ -140,4 +140,11 @@ export class CreateMessageDto {
   @IsUUID()
   @IsOptional()
   receiverUserId: string;
+
+  @ApiProperty({
+    description: 'Randomly generated string',
+    example: 'string',
+  })
+  @IsOptional()
+  tempId?: string;
 }

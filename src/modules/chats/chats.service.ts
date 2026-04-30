@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ChatParticipant } from './entities/chat-participant.entity';
 import { DataSource, Not, Repository } from 'typeorm';
 import { Chat } from './entities/chat.entity';
@@ -22,6 +22,8 @@ export class ChatsService {
     @InjectRepository(MessageReceipt)
     private messageReceiptRepo: Repository<MessageReceipt>,
     private readonly wsGateway: WsGateway,
+    @InjectRepository(Chat)
+    private chatRepo: Repository<Chat>,
   ) {}
 
   generateChatKey(user1: string, user2: string) {
@@ -145,15 +147,30 @@ export class ChatsService {
     }
   }
 
-  async getChatMessages(
-    userId: string,
-    chatId: string,
-    query: ChatMessagesFilterDto,
-  ) {
+  async getChatMessages(authUserId: string, query: ChatMessagesFilterDto) {
     try {
       const page = Number(query.page) || 1;
       const limit = query.limit ? Number(query.limit) : null;
       const skip = limit ? (page - 1) * limit : 0;
+
+      if (!query?.chatId && !query?.userId) {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Invalid User or Chat ID',
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      let chatId = query?.chatId;
+      if (query?.userId) {
+        const chatKey = this.generateChatKey(query?.userId, authUserId);
+
+        const chat = await this.chatRepo.findOne({ where: { chatKey } });
+        if (chat) {
+          chatId = chat.id;
+        }
+      }
 
       const chatMessagesQuery = this.chatMessageRepo
         .createQueryBuilder('message')
