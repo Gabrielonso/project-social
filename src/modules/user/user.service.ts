@@ -322,6 +322,7 @@ export class UserService {
       const user = await this.userRepository.findOne({
         where: { id },
         select: [
+          'id',
           'firstName',
           'lastName',
           'username',
