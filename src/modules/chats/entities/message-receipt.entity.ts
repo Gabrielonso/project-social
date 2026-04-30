@@ -25,9 +25,15 @@ export class MessageReceipt {
   @Column({ default: false })
   read: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ default: false })
+  deleted: boolean;
+
+  @Column({ name: 'delivered_at', type: 'timestamp', nullable: true })
   deliveredAt?: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ name: 'read_at', type: 'timestamp', nullable: true })
   readAt?: Date;
+
+  @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })
+  deletedAt?: Date;
 }

@@ -7,6 +7,10 @@ import { Repository } from 'typeorm';
 import { MessageReceipt } from '../entities/message-receipt.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PresenceService } from 'src/realtime/services/presence.service';
+import { EditMessageDto } from '../dtos/edit-message.dto';
+import { DeleteMessageDto } from '../dtos/delete-message.dto';
+import { ChatMessage } from '../entities/chat-message.entity';
+import { DeleteMessageMode } from '../enums/message.enum';
 
 @Injectable()
 export class ChatMessageListener {
@@ -98,6 +102,108 @@ export class ChatMessageListener {
     }
   }
 
+  @OnEvent('chat.edit_message')
+  async handleEditMessage(payload: EditMessageDto) {
+    try {
+      const message: ChatMessage | null = await this.chatService.getMessageById(
+        payload.messageId,
+      );
+
+      if (!message) throw new Error('MESSAGE_NOT_FOUND');
+
+      if (message.senderId !== payload.userId) {
+        throw new Error('UNAUTHORIZED');
+      }
+      if (payload?.text) message.text = payload.text;
+
+      message.edited = true;
+      message.editedAt = new Date();
+
+      await this.chatService.saveMessage(message);
+
+      const participants = await this.chatService.getChatParticipants(
+        message.chatId,
+      );
+
+      // 🔥 notify all users
+      for (const p of participants) {
+        this.wsGateway.emitToUser(p.userId, 'chat.message_edited', {
+          messageId: message.id,
+          text: message.text,
+          edited: true,
+        });
+      }
+    } catch (error) {
+      console.error('Edit message failed:', error);
+      const errorCodeMesssage =
+        error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+
+      this.wsGateway.emitToUser(payload.userId, 'chat.error', {
+        success: false,
+        error: {
+          code: errorCodeMesssage,
+          message: 'Failed to edit message',
+        },
+      });
+    }
+  }
+
+  @OnEvent('chat.delete_message')
+  async handleDeleteMessage(payload: DeleteMessageDto) {
+    try {
+      const message = await this.chatService.getMessageById(payload.messageId);
+
+      if (!message) throw new Error('MESSAGE_NOT_FOUND');
+
+      // 🔥 DELETE FOR ME
+      if (payload.mode === DeleteMessageMode.ME) {
+        await this.chatService.markMessageDeleteForUser(
+          message,
+          payload.userId,
+        );
+
+        this.wsGateway.emitToUser(payload.userId, 'chat.message_deleted', {
+          messageId: payload.messageId,
+          mode: payload.mode,
+        });
+
+        return;
+      }
+
+      // 🔥 DELETE FOR EVERYONE
+      if (message.senderId !== payload.userId) {
+        throw new Error('UNAUTHORIZED');
+      }
+
+      message.deleted = true;
+      message.text = null;
+
+      await this.chatService.saveMessage(message);
+
+      const participants = await this.chatService.getChatParticipants(
+        message.chatId,
+      );
+
+      for (const p of participants) {
+        this.wsGateway.emitToUser(p.userId, 'chat.message_deleted', {
+          messageId: payload.messageId,
+          mode: 'everyone',
+        });
+      }
+    } catch (error) {
+      const errorCodeMesssage =
+        error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+
+      this.wsGateway.emitToUser(payload.userId, 'chat.error', {
+        success: false,
+        error: {
+          code: errorCodeMesssage,
+          message: 'Failed to delete message',
+        },
+      });
+    }
+  }
+
   @OnEvent('chat.read')
   async handleReadChat(payload: { chatId: string; userId: string }) {
     try {
@@ -105,7 +211,7 @@ export class ChatMessageListener {
 
       await this.chatService.markRead(chatId, payload.userId);
     } catch (error: unknown) {
-      console.error('Message failed:', error);
+      console.error('Read message failed:', error);
       throw error;
     }
   }

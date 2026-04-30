@@ -100,7 +100,7 @@ class MediaDto {
 }
 
 export class CreateMessageDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Chat ID where this message belongs to',
     example: 'uuid',
   })
@@ -125,7 +125,7 @@ export class CreateMessageDto {
   @IsOptional()
   text?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Sender user ID',
     example: 'fd9391ab-9f91-45ef-87a6-df076bb19d0c',
   })
@@ -133,7 +133,7 @@ export class CreateMessageDto {
   @IsOptional()
   userId: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Receiver user ID',
     example: 'fd9391ab-9f91-45ef-87a6-df076bb19d0c',
   })
@@ -141,7 +141,7 @@ export class CreateMessageDto {
   @IsOptional()
   receiverUserId: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Randomly generated string',
     example: 'string',
   })

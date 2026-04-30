@@ -18,6 +18,9 @@ import { CurrentUser } from '../decorators/current-user.decorator';
 import { wsFailure, wsSuccess } from 'src/common/helpers/response.helper';
 import { PresenceService } from '../services/presence.service';
 import { CreateMessageDto } from 'src/modules/chats/dtos/create-message.dto';
+import { EditMessageDto } from 'src/modules/chats/dtos/edit-message.dto';
+import { DeleteMessageDto } from 'src/modules/chats/dtos/delete-message.dto';
+import { DeleteMessageMode } from 'src/modules/chats/enums/message.enum';
 
 @WebSocketGateway({
   cors: {
@@ -107,10 +110,96 @@ export class WsGateway implements OnGatewayConnection {
         }),
       );
     } catch (error) {
-      console.log(error);
       const errorCodeMesssage =
         error instanceof Error ? error.message : 'UNKNOWN_ERROR';
       ack(wsFailure('chat.send_message_ack', 'SEND_FAILED', errorCodeMesssage));
+    }
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('chat.edit_message')
+  editMessage(
+    @MessageBody() payload: EditMessageDto,
+    @CurrentUser() user: Auth,
+    @Ack() ack: (response: any) => void,
+  ) {
+    try {
+      if (!payload.messageId || !payload.text) {
+        return ack(
+          wsFailure(
+            'chat.edit_message_ack',
+            'EDIT_FAILED',
+            'Invalid message/text input',
+          ),
+        );
+      }
+      this.eventBus.emit('chat.edit_message', {
+        ...payload,
+        userId: user.id,
+      });
+
+      ack(
+        wsSuccess('chat.edit_message_ack', {
+          messageId: payload.messageId,
+        }),
+      );
+    } catch (error) {
+      const errorCodeMesssage =
+        error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+      ack(wsFailure('chat.edit_message_ack', 'EDIT_FAILED', errorCodeMesssage));
+    }
+  }
+
+  @SubscribeMessage('chat.delete_message')
+  deleteMessage(
+    @MessageBody()
+    payload: DeleteMessageDto,
+    @CurrentUser() user: Auth,
+    @Ack() ack: (response: any) => void,
+  ) {
+    try {
+      if (!payload.messageId || !payload.mode) {
+        return ack(
+          wsFailure(
+            'chat.delete_message_ack',
+            'DELETE_FAILED',
+            'Invalid message / delete mode',
+          ),
+        );
+      }
+      if (
+        ![DeleteMessageMode.EVERYONE, DeleteMessageMode.ME].includes(
+          payload.mode,
+        )
+      ) {
+        return ack(
+          wsFailure(
+            'chat.delete_message_ack',
+            'DELETE_FAILED',
+            'Delete mode must be either for me or for everyone',
+          ),
+        );
+      }
+      this.eventBus.emit('chat.delete_message', {
+        ...payload,
+        userId: user.id,
+      });
+
+      ack(
+        wsSuccess('chat.delete_message_ack', {
+          messageId: payload.messageId,
+        }),
+      );
+    } catch (error) {
+      const errorCodeMesssage =
+        error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+      ack(
+        wsFailure(
+          'chat.delete_message_ack',
+          'DELETE_FAILED',
+          errorCodeMesssage,
+        ),
+      );
     }
   }
 

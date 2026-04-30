@@ -34,7 +34,7 @@ export class ChatMessage {
   sender: User;
 
   @Column({ type: 'text', nullable: true })
-  text: string;
+  text: string | null;
 
   @Column({ type: 'text', nullable: true })
   media: string;
@@ -45,8 +45,11 @@ export class ChatMessage {
   @Column({ default: false })
   edited: boolean;
 
-  @Column({ name: 'deleted_for_everyone', default: false })
-  deletedForEveryone: boolean;
+  @Column({ default: false })
+  deleted: boolean;
+
+  @Column({ name: 'deleted_for_me', default: false })
+  deletedForMe: boolean;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>; // reactions, attachments, etc

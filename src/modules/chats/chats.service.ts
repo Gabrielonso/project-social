@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ChatParticipant } from './entities/chat-participant.entity';
-import { DataSource, Not, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { CreateMessageDto } from './dtos/create-message.dto';
 import { ChatMessage } from './entities/chat-message.entity';
@@ -242,9 +242,9 @@ export class ChatsService {
     }
   }
 
-  async getChatParticipants(chatId: string) {
+  async getChatParticipants(chatId: string): Promise<ChatParticipant[]> {
     try {
-      const participants = this.chatParticipantRepo.find({
+      const participants = await this.chatParticipantRepo.find({
         where: { chatId },
       });
       return participants;
@@ -311,6 +311,72 @@ export class ChatsService {
           userId,
         });
       }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getMessageById(messageId: string): Promise<ChatMessage | null> {
+    try {
+      return await this.dataSource.manager.transaction(
+        async (entityManager) => {
+          const chatMessageRepo = entityManager.getRepository(ChatMessage);
+
+          const message = chatMessageRepo.findOne({
+            where: { id: messageId },
+          });
+
+          return message;
+        },
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async saveMessage(message: ChatMessage) {
+    try {
+      return await this.dataSource.manager.transaction(
+        async (entityManager) => {
+          const chatMessageRepo = entityManager.getRepository(ChatMessage);
+
+          const savedMessage = await chatMessageRepo.save(message);
+
+          return savedMessage;
+        },
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async markMessageDeleteForUser(message: ChatMessage, userId: string) {
+    try {
+      await this.dataSource.manager.transaction(async (entityManager) => {
+        const chatMessageRepo = entityManager.getRepository(ChatMessage);
+        const messageReceiptRepo = entityManager.getRepository(MessageReceipt);
+
+        if (message.senderId == userId) {
+          await chatMessageRepo.update(
+            { id: message.id },
+            {
+              deletedForMe: true,
+            },
+          );
+        } else {
+          const now = new Date().toISOString();
+          await messageReceiptRepo.update(
+            {
+              userId,
+              messageId: message.id,
+            },
+            {
+              deleted: true,
+              deletedAt: now,
+            },
+          );
+        }
+      });
     } catch (error) {
       throw error;
     }
