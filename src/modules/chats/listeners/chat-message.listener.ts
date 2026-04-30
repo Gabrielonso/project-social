@@ -22,7 +22,7 @@ export class ChatMessageListener {
   async handleSendMessage(payload: CreateMessageDto) {
     try {
       let chatId = payload.chatId;
-      console.log('first reach here', chatId, payload);
+
       if (!chatId && !payload?.receiverUserId) {
         throw new Error('Invalid chat or receiver ID');
       }
