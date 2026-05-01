@@ -6,9 +6,11 @@ import {
   DeleteDateColumn,
   Entity,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { MessageReceipt } from './message-receipt.entity';
 
 @Entity('chat_messages')
 export class ChatMessage {
@@ -33,6 +35,9 @@ export class ChatMessage {
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   sender: User;
 
+  @OneToMany(() => MessageReceipt, (receipt) => receipt.message)
+  receipts: MessageReceipt[];
+
   @Column({ type: 'text', nullable: true })
   text: string | null;
 
@@ -48,7 +53,7 @@ export class ChatMessage {
   @Column({ default: false })
   deleted: boolean;
 
-  @Column({ name: 'deleted_for_me', default: false })
+  @Column({ name: 'deleted_for_me', default: false, select: false })
   deletedForMe: boolean;
 
   @Column({ type: 'jsonb', nullable: true })

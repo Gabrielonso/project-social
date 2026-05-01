@@ -100,6 +100,7 @@ export class ChatsService {
             { id: data.chatId },
             {
               lastMessageId: message.id,
+              lastMessage: message,
             },
           );
 
@@ -119,6 +120,7 @@ export class ChatsService {
       const chatParticipantsQuery = this.chatParticipantRepo
         .createQueryBuilder('chat_participant')
         .leftJoinAndSelect('chat_participant.chat', 'chat')
+        .leftJoinAndSelect('chat.lastMessage', 'lastMessage')
         .leftJoin('chat_participant.user', 'user')
         .where('user.id = :userId', { userId })
         .leftJoinAndMapOne(
@@ -174,7 +176,28 @@ export class ChatsService {
 
       const chatMessagesQuery = this.chatMessageRepo
         .createQueryBuilder('message')
+        .leftJoinAndSelect(
+          'message.receipts',
+          'receipt',
+          // 'receipt.userId = :userId',
+          // {
+          //   userId: authUserId,
+          // },
+        )
         .where('message.chatId = :chatId', { chatId })
+        .andWhere(
+          'message.senderId = :userId AND message.deletedForMe = false',
+          { userId: authUserId },
+        )
+        .orWhere('message.senderId = :userId AND message.deleted = true', {
+          userId: authUserId,
+        })
+        .orWhere('receipt.userId = :userId AND receipt.deleted = false', {
+          userId: authUserId,
+        })
+        .orWhere('receipt.userId = :userId AND message.deleted = true', {
+          userId: authUserId,
+        })
         .orderBy('message.createdAt', 'DESC');
 
       if (limit) {
@@ -191,49 +214,56 @@ export class ChatsService {
         });
       }
 
-      const messageIds = messages.map((m) => m.id);
+      // const messageIds = messages.map((m) => m.id);
 
-      const participants = await this.chatParticipantRepo.find({
-        where: { chatId },
-        select: ['userId'],
-      });
+      // const participants = await this.chatParticipantRepo.find({
+      //   where: { chatId },
+      //   select: ['userId'],
+      // });
 
-      const participantIds = participants.map((p) => p.userId);
+      // const participantIds = participants.map((p) => p.userId);
 
-      const receipts = await this.messageReceiptRepo
-        .createQueryBuilder('receipt')
-        .where('receipt.message_id IN (:...messageIds)', { messageIds })
-        .andWhere('receipt.user_id IN (:...participantIds)', { participantIds })
-        .getMany();
+      // const receipts = await this.messageReceiptRepo
+      //   .createQueryBuilder('receipt')
+      //   .where('receipt.message_id IN (:...messageIds)', { messageIds })
+      //   .andWhere('receipt.user_id IN (:...participantIds)', { participantIds })
+      //   .getMany();
 
-      // Index receipts for fast lookup
-      const receiptMap = new Map<string, any>();
+      // // Index receipts for fast lookup
+      // const receiptMap = new Map<string, any>();
 
-      for (const r of receipts) {
-        receiptMap.set(r.messageId, r);
-      }
+      // for (const r of receipts) {
+      //   receiptMap.set(r.messageId, r);
+      // }
 
-      const data = messages.map((msg) => {
-        const receipt = receiptMap.get(msg.id);
+      // const data = messages.map((msg) => {
+      //   const receipt = receiptMap.get(msg.id);
 
-        let status: 'sent' | 'delivered' | 'read' = 'sent';
+      //   let status: 'sent' | 'delivered' | 'read' = 'sent';
 
-        if (receipt?.read) {
-          status = 'read';
-        } else if (receipt?.delivered) {
-          status = 'delivered';
-        }
+      //   if (receipt?.read) {
+      //     status = 'read';
+      //   } else if (receipt?.delivered) {
+      //     status = 'delivered';
+      //   }
 
-        return {
-          ...msg,
-          status,
-          deliveredAt: receipt?.deliveredAt || null,
-          readAt: receipt?.readAt || null,
-        };
-      });
+      //   return {
+      //     ...msg,
+      //     status,
+      //     deliveredAt: receipt?.deliveredAt || null,
+      //     readAt: receipt?.readAt || null,
+      //   };
+      // });
+      // ?.filter((msg) => {
+      //   if (msg.senderId == authUserId && msg.deletedForMe) {
+      //     return;
+      //   }
+      //   return msg;
+      // })
+      // .map(({ deletedForMe, ...rest }) => rest);
 
       return successResponse('Operation Successful', {
-        data,
+        data: messages,
         currentPage: page,
         totalPages: limit ? Math.ceil(total / limit) : 1,
       });

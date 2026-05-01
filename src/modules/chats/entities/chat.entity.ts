@@ -4,6 +4,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -22,10 +23,9 @@ export class Chat {
   @Column({ name: 'last_message_id', type: 'uuid', nullable: true })
   lastMessageId: string;
   //>>>>>>>>Relations >>>>>>>>>>
-  // @OneToOne(() => ChatMessage, {
-  //   onDelete: 'SET NULL',
-  // })
-  // lastMessage: ChatMessage;
+  @ManyToOne(() => ChatMessage, { nullable: true, onDelete: 'SET NULL' })
+  lastMessage: ChatMessage;
+
   @Column({ name: 'is_group', type: 'boolean', default: false })
   isGroup: boolean;
 
