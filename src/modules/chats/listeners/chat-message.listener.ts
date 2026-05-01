@@ -187,7 +187,7 @@ export class ChatMessageListener {
       for (const p of participants) {
         this.wsGateway.emitToUser(p.userId, 'chat.message_deleted', {
           messageId: payload.messageId,
-          mode: 'everyone',
+          mode: payload.mode,
         });
       }
     } catch (error) {
