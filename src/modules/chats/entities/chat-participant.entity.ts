@@ -28,6 +28,9 @@ export class ChatParticipant {
   @Column({ name: 'is_blocked', default: false })
   isBlocked: boolean;
 
+  @Column({ name: 'is_admin', default: false })
+  isAdmin: boolean;
+
   // @Column({ name: 'unread_count', default: 0 })
   // unreadCount: number;
 

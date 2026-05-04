@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ChatParticipant } from './entities/chat-participant.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { CreateMessageDto } from './dtos/create-message.dto';
 import { ChatMessage } from './entities/chat-message.entity';
@@ -10,6 +10,10 @@ import { ChatMessagesFilterDto } from './dtos/chat-messages-filter.dto';
 import { ChatsFilterDto } from './dtos/chats-filter.dto';
 import { MessageReceipt } from './entities/message-receipt.entity';
 import { WsGateway } from 'src/realtime/gateway/ws.gateway';
+import { CreateGroupChatDto } from './dtos/create-group-chat.dto';
+import { User } from '../user/entity/user.entity';
+import { EditGroupChatDto } from './dtos/edit-group-chat.dto ';
+import { AddChatMembersDto } from './dtos/add-chat-members.dto ';
 
 @Injectable()
 export class ChatsService {
@@ -117,27 +121,47 @@ export class ChatsService {
       const page = Number(chatsFilterDto.page) || 1;
       const limit = chatsFilterDto.limit ? Number(chatsFilterDto.limit) : null;
       const skip = limit ? (page - 1) * limit : 0;
-      const chatParticipantsQuery = this.chatParticipantRepo
-        .createQueryBuilder('chat_participant')
-        .leftJoinAndSelect('chat_participant.chat', 'chat')
-        .leftJoinAndSelect('chat.lastMessage', 'lastMessage')
-        .leftJoin('chat_participant.user', 'user')
-        .where('user.id = :userId', { userId })
-        .leftJoinAndMapOne(
-          'chat.participant',
-          'chat.participants',
-          'participant',
-          `participant.userId != :me`,
-          { me: userId },
-        )
-        .leftJoinAndSelect('participant.user', 'p');
 
-      chatParticipantsQuery.orderBy('chat_participant.joinedAt', 'DESC');
+      const chatsQuery = this.chatRepo
+        .createQueryBuilder('chat')
+        .innerJoin(
+          'chat.participants',
+          'myParticipant',
+          'myParticipant.userId = :userId',
+          { userId },
+        )
+        .leftJoinAndSelect('chat.participants', 'participants')
+        .leftJoin('participants.user', 'user')
+        .addSelect([
+          'user.id',
+          'user.firstName',
+          'user.lastName',
+          'user.username',
+          'user.profilePicture',
+        ])
+        .leftJoinAndSelect('chat.lastMessage', 'lastMessage');
+
+      // const chatParticipantsQuery = this.chatParticipantRepo
+      //   .createQueryBuilder('chat_participant')
+      //   .leftJoinAndSelect('chat_participant.chat', 'chat')
+      //   .leftJoinAndSelect('chat.lastMessage', 'lastMessage')
+      //   .leftJoin('chat_participant.user', 'user')
+      //   .where('user.id = :userId', { userId })
+      //   .leftJoinAndMapOne(
+      //     'chat.participant',
+      //     'chat.participants',
+      //     'participant',
+      //     `participant.userId != :me`,
+      //     { me: userId },
+      //   )
+      //   .leftJoinAndSelect('participant.user', 'p');
+
+      chatsQuery.orderBy('chat.createdAt', 'DESC');
       if (limit) {
-        chatParticipantsQuery.skip(skip).take(limit);
+        chatsQuery.skip(skip).take(limit);
       }
 
-      const [data, total] = await chatParticipantsQuery.getManyAndCount();
+      const [data, total] = await chatsQuery.getManyAndCount();
 
       return successResponse('Operation Successful', {
         data,
@@ -407,6 +431,235 @@ export class ChatsService {
           );
         }
       });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async createGroupChat(dto: CreateGroupChatDto, userId: string) {
+    try {
+      return await this.dataSource.manager.transaction(
+        async (entityManager) => {
+          const chatRepo = entityManager.getRepository(Chat);
+          const userRepo = entityManager.getRepository(User);
+          const chatParticipantRepo =
+            entityManager.getRepository(ChatParticipant);
+          const groupChat = chatRepo.create({
+            name: dto.name,
+            about: dto.about,
+            photo: dto.photo,
+            isGroup: true,
+          });
+          const savedGroupChat = await chatRepo.save(groupChat);
+          const participants = [
+            {
+              chat: savedGroupChat,
+              user: { id: userId },
+              chatId: savedGroupChat.id,
+              userId: userId,
+              isAdmin: true,
+            },
+          ];
+          if (dto.users && dto?.users?.length) {
+            const users = await userRepo.find({
+              where: { id: In(dto.users.filter((user) => user !== userId)) },
+            });
+            if (users?.length) {
+              for (let i = 0; i < users.length; i++) {
+                const user = users[i];
+                participants.push({
+                  chat: savedGroupChat,
+                  user: { id: user.id },
+                  chatId: savedGroupChat.id,
+                  userId: user.id,
+                  isAdmin: false,
+                });
+              }
+            }
+          }
+
+          await chatParticipantRepo.save(participants);
+
+          return successResponse('Successfully created group chat');
+        },
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async editGroupChatInfo(
+    chatId: string,
+    dto: EditGroupChatDto,
+    userId: string,
+  ) {
+    try {
+      return await this.dataSource.manager.transaction(
+        async (entityManager) => {
+          const chatRepo = entityManager.getRepository(Chat);
+          const chat = await chatRepo.findOne({
+            where: { id: chatId },
+            relations: ['participants'],
+          });
+          if (!chat) {
+            throw new HttpException(
+              {
+                statusCode: HttpStatus.NOT_FOUND,
+                message: 'Chat not found',
+              },
+              HttpStatus.NOT_FOUND,
+            );
+          }
+
+          const userParticipant = chat.participants.find(
+            (participant) => (participant.userId = userId),
+          );
+
+          if (!userParticipant || !userParticipant.isAdmin) {
+            throw new HttpException(
+              {
+                statusCode: HttpStatus.UNAUTHORIZED,
+                message: 'You are not allowed to update chat',
+              },
+              HttpStatus.UNAUTHORIZED,
+            );
+          }
+
+          const { name, about, photo } = dto;
+
+          if (name !== undefined) chat.name = name;
+          if (about !== undefined) chat.about = about;
+          if (photo !== undefined) chat.photo = photo;
+
+          await chatRepo.save(chat);
+
+          return successResponse('Successfully updated chat info');
+        },
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async addChatMembers(chatId: string, dto: AddChatMembersDto, userId: string) {
+    try {
+      return await this.dataSource.manager.transaction(
+        async (entityManager) => {
+          const chatRepo = entityManager.getRepository(Chat);
+          const userRepo = entityManager.getRepository(User);
+          const chatParticipantRepo =
+            entityManager.getRepository(ChatParticipant);
+          const chat = await chatRepo.findOne({
+            where: { id: chatId },
+            relations: ['participants'],
+          });
+          if (!chat) {
+            throw new HttpException(
+              {
+                statusCode: HttpStatus.NOT_FOUND,
+                message: 'Chat not found',
+              },
+              HttpStatus.NOT_FOUND,
+            );
+          }
+
+          const userParticipant = chat.participants.find(
+            (participant) => (participant.userId = userId),
+          );
+
+          if (!userParticipant || !userParticipant.isAdmin) {
+            throw new HttpException(
+              {
+                statusCode: HttpStatus.UNAUTHORIZED,
+                message: 'You are not allowed to update chat',
+              },
+              HttpStatus.UNAUTHORIZED,
+            );
+          }
+          const participants: {
+            chat: Chat;
+            user: User;
+            chatId: string;
+            userId: string;
+            isAdmin: boolean;
+          }[] = [];
+          if (dto.users && dto?.users?.length) {
+            const users = await userRepo.find({
+              where: { id: In(dto.users.filter((user) => user !== userId)) },
+            });
+            if (users?.length) {
+              for (let i = 0; i < users.length; i++) {
+                const user = users[i];
+                participants.push({
+                  chat,
+                  user,
+                  chatId: chat.id,
+                  userId: user.id,
+                  isAdmin: false,
+                });
+              }
+            }
+          }
+
+          await chatParticipantRepo.save(participants);
+
+          return successResponse('Successfully added users to chat');
+        },
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async exitGroupChat(chatId: string, userId: string) {
+    try {
+      return await this.dataSource.manager.transaction(
+        async (entityManager) => {
+          const chatRepo = entityManager.getRepository(Chat);
+          const chatParticipantRepo =
+            entityManager.getRepository(ChatParticipant);
+          const chat = await chatRepo.findOne({
+            where: { id: chatId },
+            relations: ['participants'],
+          });
+          if (!chat) {
+            throw new HttpException(
+              {
+                statusCode: HttpStatus.NOT_FOUND,
+                message: 'Chat not found',
+              },
+              HttpStatus.NOT_FOUND,
+            );
+          }
+
+          const userParticipant = chat.participants.find(
+            (participant) => (participant.userId = userId),
+          );
+
+          if (userParticipant && chat.participants?.length == 1) {
+            //Last person in the chat, you can delete chat if need be
+          }
+
+          await chatParticipantRepo.delete({
+            userId: userParticipant?.userId,
+            chatId: userParticipant?.chatId,
+          });
+
+          return successResponse('Successfully exited chat');
+        },
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getChatMembers(chatId: string) {
+    try {
+      const participants = await this.chatParticipantRepo.find({
+        where: { chatId },
+        relations: ['user'],
+      });
+      return successResponse('Successfully fetched meembers', participants);
     } catch (error) {
       throw error;
     }

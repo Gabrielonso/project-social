@@ -32,6 +32,12 @@ export class Chat {
   @Column({ type: 'text', nullable: true })
   name?: string; // for group chats
 
+  @Column({ type: 'text', nullable: true })
+  about?: string; // for group chats
+
+  @Column({ type: 'text', nullable: true })
+  photo?: string; // for group chats
+
   @OneToMany(() => ChatParticipant, (p) => p.chat)
   participants: ChatParticipant[];
 

@@ -1,5 +1,5 @@
 import { OnEvent } from '@nestjs/event-emitter';
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { WsGateway } from 'src/realtime/gateway/ws.gateway';
 import { CreateMessageDto } from 'src/modules/chats/dtos/create-message.dto';
 import { ChatsService } from '../chats.service';
@@ -45,14 +45,26 @@ export class ChatMessageListener {
         throw new Error('ChatId could not be resolved');
       }
 
+      // 🔥 3. Get REAL participants from DB
+      const participants = await this.chatService.getChatParticipants(chatId);
+
+      const participantUser = participants.find(
+        (participant) => participant.userId == payload.userId,
+      );
+      if (!participantUser) {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.UNAUTHORIZED,
+            message: 'You cannot send message to this chat',
+          },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
       // 🔥 2. Create message
       const message = await this.chatService.createMessage({
         ...payload,
         chatId,
       });
-
-      // 🔥 3. Get REAL participants from DB
-      const participants = await this.chatService.getChatParticipants(chatId);
 
       // 🔥 4. Notify each participant (EXCEPT sender)
       for (const participant of participants) {
