@@ -96,6 +96,9 @@ export class Media {
   })
   size: number; // File size in bytes
 
+  @Column({ name: 'file_name', nullable: true })
+  fileName?: string;
+
   //   @Index()
   //   @ManyToOne(() => User, (user) => user.media, {
   //     onDelete: 'SET NULL',

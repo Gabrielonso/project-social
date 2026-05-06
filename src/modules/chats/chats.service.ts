@@ -1,6 +1,11 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { ChatParticipant } from './entities/chat-participant.entity';
-import { DataSource, In, Repository } from 'typeorm';
+import { Brackets, DataSource, In, Repository } from 'typeorm';
 import { Chat } from './entities/chat.entity';
 import { CreateMessageDto } from './dtos/create-message.dto';
 import { ChatMessage } from './entities/chat-message.entity';
@@ -14,6 +19,11 @@ import { CreateGroupChatDto } from './dtos/create-group-chat.dto';
 import { User } from '../user/entity/user.entity';
 import { EditGroupChatDto } from './dtos/edit-group-chat.dto ';
 import { AddChatMembersDto } from './dtos/add-chat-members.dto ';
+import { MediaUploadFolder } from '../media/enums/media-upload-folder.enum';
+import { MediaProvider } from '../media/enums/media-provider.enum';
+import { MessageAttachment } from './entities/message-attachment.entity';
+import { MediaStatus } from '../media/enums/media-status.enum';
+import { Media } from '../media/entities/media.entity';
 
 @Injectable()
 export class ChatsService {
@@ -87,13 +97,16 @@ export class ChatsService {
         async (entityManager) => {
           const chatMessageRepo = entityManager.getRepository(ChatMessage);
           const chatRepo = entityManager.getRepository(Chat);
-
+          const messageAttachmentRepo =
+            entityManager.getRepository(MessageAttachment);
+          const mediaRepo = entityManager.getRepository(Media);
           const message = chatMessageRepo.create({
             chat: { id: data.chatId },
             sender: { id: data.userId },
             text: data.text,
             chatId: data.chatId,
             senderId: data.userId,
+            replyToMessageId: data.replyToMessageId,
           });
 
           await chatMessageRepo.save(message);
@@ -107,6 +120,47 @@ export class ChatsService {
               lastMessage: message,
             },
           );
+
+          const messageAttachmentEntities = data.attachments.map((m) => {
+            // 🔐 ownership validation
+            if (
+              !m.sourceIdOrKey.startsWith(
+                `${MediaUploadFolder.MESSAGES}/${data.userId}/`,
+              )
+            ) {
+              throw new ForbiddenException('Invalid media ownership or folder');
+            }
+
+            const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
+
+            return mediaRepo.create({
+              //post: post.id,
+              provider: m.provider,
+              type: m.type,
+              sourceIdOrKey: m.sourceIdOrKey,
+              width: m.width,
+              height: m.height,
+              duration: m.duration,
+              status: isCloudinary ? MediaStatus.READY : MediaStatus.PROCESSING,
+              originalUrl: m.originalUrl,
+              streamUrl: m.streamUrl,
+              size: m.size,
+              fileName: m.fileName,
+              //  position: index,
+            });
+          });
+
+          const messageAttachments = messageAttachmentEntities.map(
+            (attachment, index) =>
+              messageAttachmentRepo.create({
+                position: index,
+                message,
+                attachment,
+                messageId: message.id,
+              }),
+          );
+
+          await messageAttachmentRepo.save(messageAttachments);
 
           return message;
         },
@@ -208,20 +262,27 @@ export class ChatsService {
           //   userId: authUserId,
           // },
         )
+        .leftJoinAndSelect('message.attachments', 'attachments')
+        .leftJoinAndSelect('attachments.attachment', 'attachment')
         .where('message.chatId = :chatId', { chatId })
         .andWhere(
-          'message.senderId = :userId AND message.deletedForMe = false',
-          { userId: authUserId },
+          new Brackets((qb) => {
+            qb.where(
+              'message.senderId = :userId AND message.deletedForMe = false',
+              { userId: authUserId },
+            )
+              .orWhere(
+                'message.senderId = :userId AND message.deleted = true',
+                { userId: authUserId },
+              )
+              .orWhere('receipt.userId = :userId AND receipt.deleted = false', {
+                userId: authUserId,
+              })
+              .orWhere('receipt.userId = :userId AND message.deleted = true', {
+                userId: authUserId,
+              });
+          }),
         )
-        .orWhere('message.senderId = :userId AND message.deleted = true', {
-          userId: authUserId,
-        })
-        .orWhere('receipt.userId = :userId AND receipt.deleted = false', {
-          userId: authUserId,
-        })
-        .orWhere('receipt.userId = :userId AND message.deleted = true', {
-          userId: authUserId,
-        })
         .orderBy('message.createdAt', 'DESC');
 
       if (limit) {

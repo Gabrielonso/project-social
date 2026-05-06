@@ -1,5 +1,10 @@
 import { OnEvent } from '@nestjs/event-emitter';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { WsGateway } from 'src/realtime/gateway/ws.gateway';
 import { CreateMessageDto } from 'src/modules/chats/dtos/create-message.dto';
 import { ChatsService } from '../chats.service';
@@ -11,6 +16,7 @@ import { EditMessageDto } from '../dtos/edit-message.dto';
 import { DeleteMessageDto } from '../dtos/delete-message.dto';
 import { ChatMessage } from '../entities/chat-message.entity';
 import { DeleteMessageMode } from '../enums/message.enum';
+import { MediaUploadFolder } from 'src/modules/media/enums/media-upload-folder.enum';
 
 @Injectable()
 export class ChatMessageListener {
@@ -45,6 +51,38 @@ export class ChatMessageListener {
         throw new Error('ChatId could not be resolved');
       }
 
+      if (payload.attachments) {
+        if (!payload.attachments.length || payload.attachments.length == 0)
+          throw new Error('No content in attachments');
+
+        for (let index = 0; index < payload.attachments.length; index++) {
+          const attachment = payload.attachments[index];
+
+          if (
+            !attachment.type ||
+            !attachment.provider ||
+            !attachment.originalUrl ||
+            !attachment.sourceIdOrKey
+          ) {
+            throw new HttpException(
+              {
+                statusCode: HttpStatus.BAD_REQUEST,
+                message:
+                  'Please specify type, provider, url and key for all attachments',
+              },
+              HttpStatus.BAD_REQUEST,
+            );
+          }
+
+          if (
+            !attachment.sourceIdOrKey.startsWith(
+              `${MediaUploadFolder.MESSAGES}/${payload.userId}/`,
+            )
+          ) {
+            throw new ForbiddenException('Invalid media ownership or folder');
+          }
+        }
+      }
       // 🔥 3. Get REAL participants from DB
       const participants = await this.chatService.getChatParticipants(chatId);
 

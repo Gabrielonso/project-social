@@ -11,6 +11,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { MessageReceipt } from './message-receipt.entity';
+import { MessageAttachment } from './message-attachment.entity';
 
 @Entity('chat_messages')
 export class ChatMessage {
@@ -41,8 +42,10 @@ export class ChatMessage {
   @Column({ type: 'text', nullable: true })
   text: string | null;
 
-  @Column({ type: 'text', nullable: true })
-  media: string;
+  @OneToMany(() => MessageAttachment, (pm) => pm.message, {
+    cascade: true,
+  })
+  attachments: MessageAttachment[];
 
   @Column({ default: false })
   pinned: boolean;

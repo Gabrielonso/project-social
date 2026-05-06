@@ -97,6 +97,14 @@ class MediaDto {
   @Min(0)
   @IsOptional()
   size: number;
+
+  @ApiPropertyOptional({
+    description: 'File name',
+    example: 'photo.jpg',
+  })
+  @IsString()
+  @IsOptional()
+  fileName: string;
 }
 
 export class CreateMessageDto {
@@ -115,7 +123,7 @@ export class CreateMessageDto {
   @ValidateNested({ each: true })
   @Type(() => MediaDto)
   @IsOptional()
-  media: MediaDto[];
+  attachments: MediaDto[];
 
   @ApiPropertyOptional({
     description: 'Text message',
@@ -147,4 +155,12 @@ export class CreateMessageDto {
   })
   @IsOptional()
   tempId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Message ID being replied to',
+    example: 'fd9391ab-9f91-45ef-87a6-df076bb19d0c',
+  })
+  @IsUUID()
+  @IsOptional()
+  replyToMessageId: string;
 }
