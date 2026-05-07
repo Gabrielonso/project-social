@@ -120,47 +120,52 @@ export class ChatsService {
               lastMessage: message,
             },
           );
+          if (data.attachments) {
+            const messageAttachmentEntities = data?.attachments?.map((m) => {
+              // 🔐 ownership validation
+              if (
+                !m.sourceIdOrKey.startsWith(
+                  `${MediaUploadFolder.MESSAGES}/${data.userId}/`,
+                )
+              ) {
+                throw new ForbiddenException(
+                  'Invalid media ownership or folder',
+                );
+              }
 
-          const messageAttachmentEntities = data.attachments.map((m) => {
-            // 🔐 ownership validation
-            if (
-              !m.sourceIdOrKey.startsWith(
-                `${MediaUploadFolder.MESSAGES}/${data.userId}/`,
-              )
-            ) {
-              throw new ForbiddenException('Invalid media ownership or folder');
-            }
+              const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
 
-            const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
-
-            return mediaRepo.create({
-              //post: post.id,
-              provider: m.provider,
-              type: m.type,
-              sourceIdOrKey: m.sourceIdOrKey,
-              width: m.width,
-              height: m.height,
-              duration: m.duration,
-              status: isCloudinary ? MediaStatus.READY : MediaStatus.PROCESSING,
-              originalUrl: m.originalUrl,
-              streamUrl: m.streamUrl,
-              size: m.size,
-              fileName: m.fileName,
-              //  position: index,
+              return mediaRepo.create({
+                //post: post.id,
+                provider: m.provider,
+                type: m.type,
+                sourceIdOrKey: m.sourceIdOrKey,
+                width: m.width,
+                height: m.height,
+                duration: m.duration,
+                status: isCloudinary
+                  ? MediaStatus.READY
+                  : MediaStatus.PROCESSING,
+                originalUrl: m.originalUrl,
+                streamUrl: m.streamUrl,
+                size: m.size,
+                fileName: m.fileName,
+                //  position: index,
+              });
             });
-          });
 
-          const messageAttachments = messageAttachmentEntities.map(
-            (attachment, index) =>
-              messageAttachmentRepo.create({
-                position: index,
-                message,
-                attachment,
-                messageId: message.id,
-              }),
-          );
+            const messageAttachments = messageAttachmentEntities?.map(
+              (attachment, index) =>
+                messageAttachmentRepo.create({
+                  position: index,
+                  message,
+                  attachment,
+                  messageId: message.id,
+                }),
+            );
 
-          await messageAttachmentRepo.save(messageAttachments);
+            await messageAttachmentRepo.save(messageAttachments);
+          }
 
           return message;
         },
