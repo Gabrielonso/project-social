@@ -17,13 +17,13 @@ import { AccountActivityModule } from '../account-activity/account-activity.modu
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatController } from './chat.controller';
 import { MessageReceipt } from './entities/message-receipt.entity';
+import { RealtimeModule } from 'src/realtime/realtime.module';
 import { PresenceService } from 'src/realtime/services/presence.service';
 
 @Module({
   providers: [
     ChatsService,
     ChatMessageListener,
-    WsGateway,
     JwtService,
     AuthService,
     EventBus,
@@ -39,6 +39,7 @@ import { PresenceService } from 'src/realtime/services/presence.service';
       MessageReceipt,
     ]),
     AccountActivityModule,
+    RealtimeModule,
   ],
   controllers: [ChatController],
 })

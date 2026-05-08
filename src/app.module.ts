@@ -24,10 +24,13 @@ import { ThoughtModule } from './modules/thought/thought.module';
 import { ChatsModule } from './modules/chats/chats.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { StatusModule } from './modules/status/status.module';
+import { RedisModule } from './common/redis/redis.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    RedisModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -61,6 +64,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     ThoughtModule,
     ChatsModule,
     RealtimeModule,
+    StatusModule,
     EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],

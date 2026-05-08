@@ -55,7 +55,7 @@ export class WsGateway implements OnGatewayConnection {
       // 🔥 Global user room
       if (user.id) socket.join(`user:${user.id}`);
       // 🔥 MARK ONLINE
-      this.presenceService.userConnected(user.id);
+      await this.presenceService.userConnected(user.id);
 
       // notify others (optional)
       // this.emitToUser(user.id, 'presence.status', {
@@ -71,7 +71,7 @@ export class WsGateway implements OnGatewayConnection {
     const user = socket.data.user;
 
     if (user?.id) {
-      this.presenceService.userDisconnected(user.id);
+      void this.presenceService.userDisconnected(user.id);
 
       this.emitToUser(user.id, 'presence.status', {
         status: 'offline',

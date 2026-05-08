@@ -579,7 +579,7 @@ export class ChatsService {
           }
 
           const userParticipant = chat.participants.find(
-            (participant) => (participant.userId = userId),
+            (participant) => participant.userId === userId,
           );
 
           if (!userParticipant || !userParticipant.isAdmin) {
@@ -631,7 +631,7 @@ export class ChatsService {
           }
 
           const userParticipant = chat.participants.find(
-            (participant) => (participant.userId = userId),
+            (participant) => participant.userId === userId,
           );
 
           if (!userParticipant || !userParticipant.isAdmin) {
@@ -700,7 +700,7 @@ export class ChatsService {
           }
 
           const userParticipant = chat.participants.find(
-            (participant) => (participant.userId = userId),
+            (participant) => participant.userId === userId,
           );
 
           if (userParticipant && chat.participants?.length == 1) {

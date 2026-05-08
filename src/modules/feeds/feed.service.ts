@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -7,6 +7,8 @@ import { RawFeedRow } from './types/feed.types';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { Post } from 'src/modules/posts/entities/post.entity';
 import { FeedType } from './enums/feed-type.enum';
+import { REDIS_CLIENT } from 'src/common/redis/redis.constants';
+import Redis from 'ioredis';
 
 @Injectable()
 export class FeedService {
@@ -16,7 +18,26 @@ export class FeedService {
     private postRepo: Repository<Post>,
     @InjectRepository(Ad)
     private adRepo: Repository<Ad>,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
+
+  private encodeCursor(input: { createdAt: string; id: string }) {
+    return Buffer.from(JSON.stringify(input), 'utf8').toString('base64');
+  }
+
+  private decodeCursor(
+    cursor?: string,
+  ): { createdAt: string; id: string } | null {
+    if (!cursor) return null;
+    try {
+      const raw = Buffer.from(cursor, 'base64').toString('utf8');
+      const parsed = JSON.parse(raw);
+      if (!parsed?.createdAt || !parsed?.id) return null;
+      return { createdAt: String(parsed.createdAt), id: String(parsed.id) };
+    } catch {
+      return null;
+    }
+  }
 
   async hydrateFeed(
     viewerId: string | undefined,
@@ -187,11 +208,22 @@ export class FeedService {
   }
 
   async getFeed(userId: string, feedFilterDto: FeedFilterDto) {
-    const page = Number(feedFilterDto.page) || 1;
-    const limit = Number(feedFilterDto.limit) || 20;
-    const offset = (page - 1) * limit;
+    const limit = Math.min(50, Number(feedFilterDto.limit) || 20);
 
-    const rows = await this.dataSource.query(
+    // Prefer cursor pagination at scale (no OFFSET scan).
+    const decoded = this.decodeCursor(feedFilterDto.cursor);
+    const cursorCreatedAt = decoded?.createdAt;
+    const cursorId = decoded?.id;
+
+    const cacheKey = `feed:v2:public:${userId || 'anon'}:${limit}:${feedFilterDto.cursor || 'first'}`;
+    const cached = await this.redis.get(cacheKey);
+    console.log(cacheKey, 'ck');
+    console.log(cached, 'cached');
+    if (cached) {
+      return JSON.parse(cached);
+    }
+    console.log('After cached');
+    const rows: RawFeedRow[] = await this.dataSource.query(
       `
       (
         SELECT
@@ -200,6 +232,12 @@ export class FeedService {
           p.created_at AS "createdAt"
         FROM posts p
         WHERE p.is_public = true
+          AND (
+            $2::timestamp IS NULL
+            OR (p.created_at, p.id) < ($2::timestamp, $3::uuid)
+          )
+        ORDER BY p.created_at DESC, p.id DESC
+        LIMIT $1
       )
       UNION ALL
       (
@@ -208,22 +246,46 @@ export class FeedService {
           'ad' AS type,
           a.created_at AS "createdAt"
         FROM ads a
+        WHERE (
+          $2::timestamp IS NULL
+          OR (a.created_at, a.id) < ($2::timestamp, $3::uuid)
+        )
+        ORDER BY a.created_at DESC, a.id DESC
+        LIMIT $1
       )
-      ORDER BY "createdAt" DESC
-      LIMIT $1 OFFSET $2
+      ORDER BY "createdAt" DESC, id DESC
+      LIMIT $1
       `,
-      [limit, offset],
+      [limit, cursorCreatedAt || null, cursorId || null],
     );
 
-    const total = await this.dataSource.query(
-      `SELECT COUNT(*) FROM (
-  SELECT id FROM posts WHERE is_public = true
-  UNION ALL
-  SELECT id FROM ads
-) t`,
-    );
+    // Backwards compatible shape: keep currentPage/totalPages, but avoid COUNT() at scale.
+    // We return a "best effort" totalPages=1 and encourage cursor use.
+    const page = Number(feedFilterDto.page) || 1;
+    const total = limit; // placeholder; avoids expensive COUNT() on hot path
 
-    return this.hydrateFeed(userId, rows, page, limit, total[0]?.count);
+    const response = await this.hydrateFeed(userId, rows, page, limit, total);
+
+    const last = rows[rows.length - 1];
+    const nextCursor =
+      last?.createdAt && last?.id
+        ? this.encodeCursor({
+            createdAt: new Date(last.createdAt).toISOString(),
+            id: last.id,
+          })
+        : null;
+
+    const withCursor = {
+      ...response,
+      data: {
+        ...(response as any).data,
+        nextCursor,
+        hasMore: rows.length === limit,
+      },
+    };
+
+    await this.redis.set(cacheKey, JSON.stringify(withCursor), 'EX', 10);
+    return withCursor;
   }
 
   async getMyPublishedFeed(userId: string, feedFilterDto: FeedFilterDto) {

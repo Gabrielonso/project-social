@@ -144,14 +144,26 @@ export class NotificationService {
       const title = dto.title || 'Notification';
       const chunks = this.chunkArray(recipients, 1000);
       for (const chunk of chunks) {
-        await Promise.all(
-          chunk.map((u) =>
-            this.notifyUser({
-              userId: u.id,
-              title,
-              body: dto.body,
-            }),
-          ),
+        // 1) persist notification rows in bulk (fast, fewer roundtrips)
+        const entities = chunk.map((u) =>
+          this.notificationRepo.create({
+            userId: u.id,
+            title,
+            body: dto.body,
+          }),
+        );
+        await this.notificationRepo.save(entities, { chunk: 1000 });
+
+        // 2) enqueue ONE batch push job for this chunk (dramatically fewer jobs)
+        await this.notificationsQueue.add(
+          JobType.SEND_PUSH_NOTIFICATION_BATCH,
+          { userIds: chunk.map((u) => u.id), title, body: dto.body },
+          {
+            removeOnComplete: true,
+            removeOnFail: false,
+            attempts: 5,
+            backoff: { type: 'exponential', delay: 3000 },
+          },
         );
       }
 
