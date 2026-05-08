@@ -105,12 +105,13 @@ export class ChatMessageListener {
       });
 
       // 🔥 4. Notify each participant (EXCEPT sender)
+      const receipts: MessageReceipt[] = [];
       for (const participant of participants) {
         const userId = participant.userId;
 
         if (userId === payload.userId) continue;
         const status = this.presenceService.getStatus(userId);
-        await this.messageReceiptRepo.save({
+        const savedReceipt = await this.messageReceiptRepo.save({
           message,
           user: { id: userId },
           messageId: message.id,
@@ -120,14 +121,16 @@ export class ChatMessageListener {
             deliveredAt: new Date(),
           }),
         });
-
+        receipts.push(savedReceipt);
         this.wsGateway.emitToUser(userId, 'chat.new_message', {
           success: true,
           data: message,
         });
       }
       this.wsGateway.emitToUser(payload.userId, 'chat.message_sent', {
-        messageId: message.id,
+        ...message,
+        receipts,
+        tempId: payload.tempId,
       });
 
       // 🔥 5. Notify chat room (for active users)

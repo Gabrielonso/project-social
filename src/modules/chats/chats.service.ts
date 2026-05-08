@@ -120,6 +120,7 @@ export class ChatsService {
               lastMessage: message,
             },
           );
+          let attachments: MessageAttachment[] = [];
           if (data.attachments) {
             const messageAttachmentEntities = data?.attachments?.map((m) => {
               // 🔐 ownership validation
@@ -164,10 +165,10 @@ export class ChatsService {
                 }),
             );
 
-            await messageAttachmentRepo.save(messageAttachments);
+            attachments = await messageAttachmentRepo.save(messageAttachments);
           }
 
-          return message;
+          return { ...message, attachments };
         },
       );
     } catch (error) {
