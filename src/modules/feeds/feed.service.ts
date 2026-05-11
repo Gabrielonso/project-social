@@ -6,7 +6,14 @@ import {
 } from 'src/common/helpers/response.helper';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FeedFilterDto } from './dtos/feed-filter.dto';
-import { RawFeedRow } from './types/feed.types';
+import {
+  CachedBaseEntity,
+  FollowPairRow,
+  LikeBookmarkRow,
+  RawFeedRow,
+  TagDto,
+  TagRow,
+} from './types/feed.types';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { Post } from 'src/modules/posts/entities/post.entity';
 import { FeedType } from './enums/feed-type.enum';
@@ -17,46 +24,6 @@ import {
   feedTagsKey,
   publicFeedListCacheKey,
 } from './feed-cache.keys';
-
-type TagDto = {
-  id: string;
-  userId: string;
-  username: string;
-  userAvatar?: string;
-  type: string;
-  startIndex?: number;
-  endIndex?: number;
-  createdAt: string;
-};
-
-type TagRow = {
-  entity: string;
-  entity_id: string;
-  id: string;
-  user_id: string;
-  username: string;
-  user_avatar: string | null;
-  type: string;
-  start_index: number | null;
-  end_index: number | null;
-  created_at: string;
-};
-
-type FollowPairRow = {
-  follower_id: string;
-  following_id: string;
-};
-
-type LikeBookmarkRow = {
-  entity: string;
-  entity_id: string;
-};
-
-type CachedBaseEntity = {
-  id: string;
-  ownerId?: string;
-  tags?: TagDto[];
-} & Record<string, unknown>;
 
 @Injectable()
 export class FeedService {
@@ -234,17 +201,17 @@ export class FeedService {
 
     // 2) Base posts/ads: fetch from cache first
     const postBaseKeys = postIds.map((id) => feedBaseKey(FeedType.POST, id));
-    console.log(postBaseKeys, 'pbk');
+
     const adBaseKeys = adIds.map((id) => feedBaseKey(FeedType.AD, id));
-    console.log(adBaseKeys, 'abk');
+
     const cachedPosts = await this.mgetJson<CachedBaseEntity>(postBaseKeys);
-    console.log(cachedPosts, 'cp');
+
     const cachedAds = await this.mgetJson<CachedBaseEntity>(adBaseKeys);
-    console.log(cachedAds, 'ca');
+
     const missingPostIds = postIds.filter((_, idx) => !cachedPosts[idx]);
-    console.log(missingPostIds, 'mp');
+
     const missingAdIds = adIds.filter((_, idx) => !cachedAds[idx]);
-    console.log(missingAdIds, 'ma');
+
     const fetchedPosts = missingPostIds.length
       ? await this.postRepo
           .createQueryBuilder('post')
@@ -459,7 +426,6 @@ export class FeedService {
 
   async getFeed(userId: string, feedFilterDto: FeedFilterDto) {
     const limit = Math.min(50, Number(feedFilterDto.limit) || 20);
-    console.log(feedFilterDto.cursor);
 
     // Prefer cursor pagination at scale (no OFFSET scan).
     const decoded = this.decodeCursor(feedFilterDto.cursor);
@@ -472,9 +438,9 @@ export class FeedService {
       limit,
       cursorToken: feedFilterDto.cursor || 'first',
     });
-    console.log(cacheKey, 'ckey');
+
     const cached = await this.redis.get(cacheKey);
-    console.log(cached, 'cached');
+
     if (cached) {
       try {
         return JSON.parse(cached) as ApiResponse<unknown>;

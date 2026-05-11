@@ -32,7 +32,7 @@ export class ChatMessageListener {
   async handleSendMessage(payload: CreateMessageDto) {
     try {
       let chatId = payload.chatId;
-      console.log('first got here');
+
       if (!chatId && !payload?.receiverUserId) {
         throw new Error('Invalid chat or receiver ID');
       }
@@ -123,7 +123,7 @@ export class ChatMessageListener {
           }),
         } as MessageReceipt;
       });
-      console.log(receiptsToSave, 'rts');
+
       const receipts = receiptsToSave.length
         ? await this.messageReceiptRepo.save(receiptsToSave)
         : [];

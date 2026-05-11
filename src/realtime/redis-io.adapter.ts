@@ -37,11 +37,7 @@ export class RedisIoAdapter extends IoAdapter {
     await pubClient.connect();
     await subClient.connect();
 
-    console.log('Redis pub connected');
-    console.log('Redis sub connected');
-
     this.adapterConstructor = createAdapter(pubClient, subClient);
-    console.log('Redis adapter created');
   }
 
   createIOServer(port: number, options?: ServerOptions): any {
@@ -51,15 +47,15 @@ export class RedisIoAdapter extends IoAdapter {
       },
       ...options,
     });
-    console.log('Attaching Redis adapter');
+
     if (!this.adapterConstructor) {
       throw new Error(
         'RedisIoAdapter not connected. Call connectToRedis() before starting the app.',
       );
     }
-    console.log('Attaching Redis adapter');
+
     server.adapter(this.adapterConstructor);
-    console.log(server.of('/').adapter.constructor.name);
+
     return server;
   }
 }
