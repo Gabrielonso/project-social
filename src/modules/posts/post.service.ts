@@ -4,6 +4,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { CreatePostDto } from './dtos/create-post.dto';
@@ -26,9 +27,12 @@ import { Tag } from '../engagements/entities/tag.entity';
 import { AccountActivityService } from '../account-activity/account-activity.service';
 import { NotificationService } from '../notification/notification.service';
 import { NotificationTemplates } from '../notification/notification.templates';
+import { FeedCacheInvalidationService } from '../feeds/feed-cache-invalidation.service';
 
 @Injectable()
 export class PostService {
+  private readonly logger = new Logger(PostService.name);
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(Post)
@@ -37,11 +41,24 @@ export class PostService {
     private adRepo: Repository<Ad>,
     private readonly accountActivityService: AccountActivityService,
     private readonly notificationService: NotificationService,
+    private readonly feedCacheInvalidation: FeedCacheInvalidationService,
   ) {}
+
+  private async safeInvalidateFeedCaches(
+    fn: () => Promise<void>,
+  ): Promise<void> {
+    try {
+      await fn();
+    } catch (err) {
+      this.logger.warn(
+        `Feed cache invalidation failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
 
   async createPost(dto: CreatePostDto, userId: string) {
     try {
-      return await this.dataSource.manager.transaction(
+      const result = await this.dataSource.manager.transaction(
         async (entityManager) => {
           const postRepo = entityManager.getRepository(Post);
           const mediaRepo = entityManager.getRepository(Media);
@@ -230,6 +247,10 @@ export class PostService {
           return successResponse('Successfully created post');
         },
       );
+      await this.safeInvalidateFeedCaches(() =>
+        this.feedCacheInvalidation.invalidatePublicFeedListCaches(),
+      );
+      return result;
     } catch (error) {
       throw error;
     }
@@ -265,6 +286,10 @@ export class PostService {
         action: 'post.updated',
         metadata: { postId },
       });
+
+      await this.safeInvalidateFeedCaches(() =>
+        this.feedCacheInvalidation.invalidatePostAndPublicList(postId),
+      );
 
       return successResponse('Successfully updated post');
     } catch (error) {
@@ -425,7 +450,7 @@ export class PostService {
 
   async deletePost(postId: string, userId: string) {
     try {
-      return await this.dataSource.manager.transaction(
+      const result = await this.dataSource.manager.transaction(
         async (entityManager) => {
           const postRepo = entityManager.getRepository(Post);
           const mediaRepo = entityManager.getRepository(Media);
@@ -465,6 +490,10 @@ export class PostService {
           return successResponse('Successfully deleted post');
         },
       );
+      await this.safeInvalidateFeedCaches(() =>
+        this.feedCacheInvalidation.invalidatePostAndPublicList(postId),
+      );
+      return result;
     } catch (error) {
       throw error;
     }

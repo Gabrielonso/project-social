@@ -8,7 +8,6 @@ import { User } from 'src/modules/user/entity/user.entity';
 import { AccountActivityService } from 'src/modules/account-activity/account-activity.service';
 import { AccountActivity } from 'src/modules/account-activity/entities/account-activity.entity';
 import { EventBus } from 'src/events/event-bus.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PresenceService } from './services/presence.service';
 
 @Module({
@@ -19,7 +18,6 @@ import { PresenceService } from './services/presence.service';
     UserService,
     AccountActivityService,
     EventBus,
-    EventEmitter2,
     PresenceService,
   ],
   exports: [WsGateway],

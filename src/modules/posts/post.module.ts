@@ -6,6 +6,7 @@ import { Post } from './entities/post.entity';
 import { Ad } from '../ads/entities/ads.entity';
 import { AccountActivityModule } from '../account-activity/account-activity.module';
 import { NotificationModule } from '../notification/notification.module';
+import { FeedModule } from '../feeds/feed.module';
 
 @Module({
   providers: [PostService],
@@ -14,6 +15,7 @@ import { NotificationModule } from '../notification/notification.module';
     TypeOrmModule.forFeature([Post, Ad]),
     AccountActivityModule,
     NotificationModule,
+    FeedModule,
   ],
 })
 export class PostModule {}

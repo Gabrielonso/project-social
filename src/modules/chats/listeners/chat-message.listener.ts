@@ -105,13 +105,14 @@ export class ChatMessageListener {
       });
 
       // 🔥 4. Notify each participant (EXCEPT sender)
-      const receipts: MessageReceipt[] = [];
-      for (const participant of participants) {
-        const userId = participant.userId;
+      const recipientIds = participants
+        .map((p) => p.userId)
+        .filter((id) => id && id !== payload.userId);
 
-        if (userId === payload.userId) continue;
-        const status = this.presenceService.getStatus(userId);
-        const savedReceipt = await this.messageReceiptRepo.save({
+      const statusMap = await this.presenceService.getStatuses(recipientIds);
+      const receiptsToSave = recipientIds.map((userId) => {
+        const status = statusMap.get(userId) || 'offline';
+        return {
           message,
           user: { id: userId },
           messageId: message.id,
@@ -120,8 +121,14 @@ export class ChatMessageListener {
             delivered: true,
             deliveredAt: new Date(),
           }),
-        });
-        receipts.push(savedReceipt);
+        } as MessageReceipt;
+      });
+
+      const receipts = receiptsToSave.length
+        ? await this.messageReceiptRepo.save(receiptsToSave)
+        : [];
+
+      for (const userId of recipientIds) {
         this.wsGateway.emitToUser(userId, 'chat.new_message', {
           success: true,
           data: message,
@@ -266,6 +273,21 @@ export class ChatMessageListener {
     } catch (error: unknown) {
       console.error('Read message failed:', error);
       throw error;
+    }
+  }
+
+  // Delivery sweep: when a user's socket connects we flip every still-
+  // undelivered receipt for them to delivered=true. This is the catch-up
+  // path for messages that arrived while they were offline (the send-time
+  // path in handleSendMessage only marks delivered for users who are
+  // already online when the message is created).
+  @OnEvent('chat.user_connected')
+  async handleUserConnected(payload: { userId: string }) {
+    try {
+      if (!payload?.userId) return;
+      await this.chatService.markDelivered(payload.userId);
+    } catch (error: unknown) {
+      console.error('Delivery sweep on connect failed:', error);
     }
   }
 }

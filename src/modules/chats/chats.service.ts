@@ -74,12 +74,14 @@ export class ChatsService {
               user: { id: userA },
               chatId: savedChat.id,
               userId: userA,
+              joinedAt: new Date(),
             },
             {
               chat,
               user: { id: userB },
               chatId: savedChat.id,
               userId: userB,
+              joinedAt: new Date(),
             },
           ]);
 
@@ -199,29 +201,74 @@ export class ChatsService {
           'user.username',
           'user.profilePicture',
         ])
-        .leftJoinAndSelect('chat.lastMessage', 'lastMessage');
+        .leftJoinAndSelect('chat.lastMessage', 'lastMessage')
+        .leftJoinAndSelect('lastMessage.attachments', 'lastMessageAttachments')
+        .leftJoinAndSelect(
+          'lastMessageAttachments.attachment',
+          'lastMessageAttachmentsAttachment',
+        )
+        // Fall back to the current user's joined_at when there's no
+        // lastMessage, or when they joined after the last message was sent.
+        // GREATEST in Postgres returns the non-null argument when one side
+        // is NULL, so this also keeps brand-new chats at the right position.
+        //
+        // The expression is exposed via addSelect with a flat alias because
+        // TypeORM's split-query pagination path naively does
+        // `orderCriteria.split('.')` and tries to resolve the first segment
+        // as a join alias — so a raw expression in orderBy breaks. Ordering
+        // by the addSelect alias hits a different code branch that prefixes
+        // it with the outer distinct-alias for us.
+        .addSelect(
+          `GREATEST("lastMessage"."created_at", "myParticipant"."joined_at")`,
+          'chat_sort_at',
+        )
+        .orderBy('chat_sort_at', 'DESC');
 
-      // const chatParticipantsQuery = this.chatParticipantRepo
-      //   .createQueryBuilder('chat_participant')
-      //   .leftJoinAndSelect('chat_participant.chat', 'chat')
-      //   .leftJoinAndSelect('chat.lastMessage', 'lastMessage')
-      //   .leftJoin('chat_participant.user', 'user')
-      //   .where('user.id = :userId', { userId })
-      //   .leftJoinAndMapOne(
-      //     'chat.participant',
-      //     'chat.participants',
-      //     'participant',
-      //     `participant.userId != :me`,
-      //     { me: userId },
-      //   )
-      //   .leftJoinAndSelect('participant.user', 'p');
-
-      chatsQuery.orderBy('chat.createdAt', 'DESC');
       if (limit) {
         chatsQuery.skip(skip).take(limit);
       }
 
-      const [data, total] = await chatsQuery.getManyAndCount();
+      const total = await chatsQuery.getCount();
+      const chats = await chatsQuery.getMany();
+
+      // Resolve unread counts in a separate query keyed by chatId. Doing it
+      // inline via addSelect + getRawAndEntities is unreliable here because
+      // the main query uses pagination with one-to-many joins, so TypeORM
+      // splits it into an id query + data query and the raw rows returned to
+      // us no longer carry the subquery column (and even without splitting,
+      // raw rows are not 1:1 with deduped entities).
+      const unreadCountMap = new Map<string, number>();
+      if (chats.length > 0) {
+        const chatIds = chats.map((c) => c.id);
+        const unreadRows = await this.chatMessageRepo
+          .createQueryBuilder('message')
+          .select('message.chat_id', 'chatId')
+          .addSelect('COUNT(message.id)', 'unreadCount')
+          .innerJoin(
+            'chat_participants',
+            'participant',
+            'participant.chat_id = message.chat_id AND participant.user_id = :userId',
+          )
+          .where('message.chat_id IN (:...chatIds)', { chatIds })
+          .andWhere('message.sender_id != :userId')
+          // Don't count messages sent before this user actually joined.
+          .andWhere('message.created_at >= participant.joined_at')
+          .andWhere(
+            '(participant.last_read_at IS NULL OR message.created_at > participant.last_read_at)',
+          )
+          .setParameter('userId', userId)
+          .groupBy('message.chat_id')
+          .getRawMany<{ chatId: string; unreadCount: string }>();
+
+        for (const row of unreadRows) {
+          unreadCountMap.set(row.chatId, Number(row.unreadCount));
+        }
+      }
+
+      const data = chats.map((chat) => ({
+        ...chat,
+        unreadCount: unreadCountMap.get(chat.id) ?? 0,
+      }));
 
       return successResponse('Operation Successful', {
         data,
@@ -260,17 +307,25 @@ export class ChatsService {
 
       const chatMessagesQuery = this.chatMessageRepo
         .createQueryBuilder('message')
-        .leftJoinAndSelect(
-          'message.receipts',
-          'receipt',
-          // 'receipt.userId = :userId',
-          // {
-          //   userId: authUserId,
-          // },
+        // Pin the query to the caller's chat_participants row. This both
+        // enforces membership (a non-participant gets an empty result set
+        // instead of relying on the OR-conditions below to filter them out)
+        // and gives us joined_at to scope visible history.
+        .innerJoin(
+          'chat_participants',
+          'participant',
+          'participant.chat_id = message.chat_id AND participant.user_id = :userId',
+          { userId: authUserId },
         )
+        .leftJoinAndSelect('message.receipts', 'receipt')
         .leftJoinAndSelect('message.attachments', 'attachments')
         .leftJoinAndSelect('attachments.attachment', 'attachment')
         .where('message.chatId = :chatId', { chatId })
+        // Don't surface messages older than the user's current membership.
+        // Receipts aren't backfilled when someone is added to a chat, and
+        // exitGroupChat deletes the participant row but not their old
+        // receipts, so a leave+rejoin would otherwise leak pre-leave history.
+        .andWhere('message.created_at >= participant.joined_at')
         .andWhere(
           new Brackets((qb) => {
             qb.where(
@@ -305,54 +360,6 @@ export class ChatsService {
         });
       }
 
-      // const messageIds = messages.map((m) => m.id);
-
-      // const participants = await this.chatParticipantRepo.find({
-      //   where: { chatId },
-      //   select: ['userId'],
-      // });
-
-      // const participantIds = participants.map((p) => p.userId);
-
-      // const receipts = await this.messageReceiptRepo
-      //   .createQueryBuilder('receipt')
-      //   .where('receipt.message_id IN (:...messageIds)', { messageIds })
-      //   .andWhere('receipt.user_id IN (:...participantIds)', { participantIds })
-      //   .getMany();
-
-      // // Index receipts for fast lookup
-      // const receiptMap = new Map<string, any>();
-
-      // for (const r of receipts) {
-      //   receiptMap.set(r.messageId, r);
-      // }
-
-      // const data = messages.map((msg) => {
-      //   const receipt = receiptMap.get(msg.id);
-
-      //   let status: 'sent' | 'delivered' | 'read' = 'sent';
-
-      //   if (receipt?.read) {
-      //     status = 'read';
-      //   } else if (receipt?.delivered) {
-      //     status = 'delivered';
-      //   }
-
-      //   return {
-      //     ...msg,
-      //     status,
-      //     deliveredAt: receipt?.deliveredAt || null,
-      //     readAt: receipt?.readAt || null,
-      //   };
-      // });
-      // ?.filter((msg) => {
-      //   if (msg.senderId == authUserId && msg.deletedForMe) {
-      //     return;
-      //   }
-      //   return msg;
-      // })
-      // .map(({ deletedForMe, ...rest }) => rest);
-
       return successResponse('Operation Successful', {
         data: messages,
         currentPage: page,
@@ -374,33 +381,67 @@ export class ChatsService {
     }
   }
 
-  async markDelivered(chatId: string, userId: string) {
+  /**
+   * Flip every still-undelivered receipt for `userId` to delivered=true and
+   * notify the original senders. Used as a sweep on socket connect (no
+   * chatId) and can also be narrowed to a single chat if a caller ever
+   * wants per-chat-open semantics.
+   */
+  async markDelivered(userId: string, chatId?: string) {
     try {
-      const receipts = await this.messageReceiptRepo.find({
-        where: {
-          user: { id: userId },
-          delivered: false,
-        },
-        relations: ['message'],
-      });
+      const qb = this.messageReceiptRepo
+        .createQueryBuilder('receipt')
+        .innerJoinAndSelect('receipt.message', 'message')
+        .where('receipt.user_id = :userId', { userId })
+        .andWhere('receipt.delivered = false');
 
-      for (const r of receipts) {
-        r.delivered = true;
-        r.deliveredAt = new Date();
+      if (chatId) {
+        qb.andWhere('message.chat_id = :chatId', { chatId });
       }
 
-      await this.messageReceiptRepo.save(receipts);
+      const receipts = await qb.getMany();
+      if (!receipts.length) return;
 
-      // notify sender
+      const now = new Date();
+      await this.messageReceiptRepo
+        .createQueryBuilder()
+        .update()
+        .set({ delivered: true, deliveredAt: now })
+        .whereInIds(receipts.map((r) => r.id))
+        .execute();
+
+      // Batch notifications: a user reconnecting after a long gap may have
+      // hundreds of undelivered receipts. One socket event per message
+      // floods the senders' sockets, so we group by (senderId, chatId) and
+      // emit a single chat.messages_delivered event per group. The
+      // frontend gets enough info to tick every affected message in one
+      // pass per chat thread.
+      const bySenderAndChat = new Map<string, Map<string, string[]>>();
       for (const r of receipts) {
-        this.wsGateway.emitToUser(
-          r.message.sender.id,
-          'chat.message_delivered',
-          {
-            messageId: r.message.id,
+        const senderId = r.message.senderId;
+        const msgChatId = r.message.chatId;
+        let byChat = bySenderAndChat.get(senderId);
+        if (!byChat) {
+          byChat = new Map<string, string[]>();
+          bySenderAndChat.set(senderId, byChat);
+        }
+        let ids = byChat.get(msgChatId);
+        if (!ids) {
+          ids = [];
+          byChat.set(msgChatId, ids);
+        }
+        ids.push(r.message.id);
+      }
+
+      for (const [senderId, byChat] of bySenderAndChat) {
+        for (const [groupChatId, messageIds] of byChat) {
+          this.wsGateway.emitToUser(senderId, 'chat.messages_delivered', {
             userId,
-          },
-        );
+            chatId: groupChatId,
+            messageIds,
+            deliveredAt: now,
+          });
+        }
       }
     } catch (error) {
       throw error;
@@ -409,29 +450,70 @@ export class ChatsService {
 
   async markRead(chatId: string, userId: string) {
     try {
-      const receipts = await this.messageReceiptRepo.find({
-        where: {
-          user: { id: userId },
-          read: false,
-          message: { chat: { id: chatId } },
+      return await this.dataSource.manager.transaction(
+        async (entityManager) => {
+          const messageReceiptRepo =
+            entityManager.getRepository(MessageReceipt);
+          const chatParticipantRepo =
+            entityManager.getRepository(ChatParticipant);
+          const receipts = await messageReceiptRepo.find({
+            where: {
+              user: { id: userId },
+              read: false,
+              message: { chat: { id: chatId } },
+            },
+            relations: ['message'],
+            order: { message: { createdAt: 'DESC' } },
+          });
+
+          const now = new Date();
+          for (const r of receipts) {
+            r.read = true;
+            r.readAt = now;
+            // Read necessarily implies delivered. If the sweep on socket
+            // connect hasn't run yet (or this receipt was created while the
+            // user was offline and they're reading via HTTP), make sure
+            // we don't leave the receipt in the nonsensical state
+            // "read=true, delivered=false".
+            if (!r.delivered) {
+              r.delivered = true;
+              r.deliveredAt = now;
+            }
+          }
+          await chatParticipantRepo.update(
+            { chatId, userId },
+            {
+              lastReadAt: now,
+            },
+          );
+          await messageReceiptRepo.save(receipts);
+
+          // Notify senders in batches: every receipt here belongs to the
+          // same chat, so we only need to group by sender to collapse a
+          // potentially long read-receipt list into one frame per sender.
+          // Mirrors the chat.messages_delivered shape.
+          const messageIdsBySender = new Map<string, string[]>();
+          for (const r of receipts) {
+            const senderId = r.message?.senderId;
+            if (!senderId) continue;
+            let ids = messageIdsBySender.get(senderId);
+            if (!ids) {
+              ids = [];
+              messageIdsBySender.set(senderId, ids);
+            }
+            ids.push(r.message.id);
+          }
+
+          for (const [senderId, messageIds] of messageIdsBySender) {
+            this.wsGateway.emitToUser(senderId, 'chat.messages_read', {
+              userId,
+              chatId,
+              messageIds,
+              readAt: now,
+            });
+          }
         },
-        relations: ['message.sender'],
-      });
-
-      for (const r of receipts) {
-        r.read = true;
-        r.readAt = new Date();
-      }
-
-      await this.messageReceiptRepo.save(receipts);
-
-      // notify senders
-      for (const r of receipts) {
-        this.wsGateway.emitToUser(r?.message?.sender?.id, 'chat.message_read', {
-          messageId: r?.message?.id,
-          userId,
-        });
-      }
+      );
     } catch (error) {
       throw error;
     }
@@ -525,6 +607,7 @@ export class ChatsService {
               chatId: savedGroupChat.id,
               userId: userId,
               isAdmin: true,
+              joinedAt: new Date(),
             },
           ];
           if (dto.users && dto?.users?.length) {
@@ -540,6 +623,7 @@ export class ChatsService {
                   chatId: savedGroupChat.id,
                   userId: user.id,
                   isAdmin: false,
+                  joinedAt: new Date(),
                 });
               }
             }
@@ -579,7 +663,7 @@ export class ChatsService {
           }
 
           const userParticipant = chat.participants.find(
-            (participant) => (participant.userId = userId),
+            (participant) => participant.userId === userId,
           );
 
           if (!userParticipant || !userParticipant.isAdmin) {
@@ -631,7 +715,7 @@ export class ChatsService {
           }
 
           const userParticipant = chat.participants.find(
-            (participant) => (participant.userId = userId),
+            (participant) => participant.userId === userId,
           );
 
           if (!userParticipant || !userParticipant.isAdmin) {
@@ -685,6 +769,8 @@ export class ChatsService {
           const chatRepo = entityManager.getRepository(Chat);
           const chatParticipantRepo =
             entityManager.getRepository(ChatParticipant);
+          const messageReceiptRepo =
+            entityManager.getRepository(MessageReceipt);
           const chat = await chatRepo.findOne({
             where: { id: chatId },
             relations: ['participants'],
@@ -700,16 +786,40 @@ export class ChatsService {
           }
 
           const userParticipant = chat.participants.find(
-            (participant) => (participant.userId = userId),
+            (participant) => participant.userId === userId,
           );
 
-          if (userParticipant && chat.participants?.length == 1) {
+          if (!userParticipant) {
+            throw new HttpException(
+              {
+                statusCode: HttpStatus.NOT_FOUND,
+                message: 'You are not a member of this chat',
+              },
+              HttpStatus.NOT_FOUND,
+            );
+          }
+
+          if (chat.participants.length === 1) {
             //Last person in the chat, you can delete chat if need be
           }
 
+          // Drop this user's receipts for messages in this chat so that a
+          // future rejoin doesn't surface stale history and the table
+          // doesn't accumulate dead rows. Scoped via a subquery on
+          // chat_messages because message_receipts doesn't carry chat_id.
+          await messageReceiptRepo
+            .createQueryBuilder()
+            .delete()
+            .where('user_id = :userId', { userId })
+            .andWhere(
+              'message_id IN (SELECT id FROM chat_messages WHERE chat_id = :chatId)',
+              { chatId },
+            )
+            .execute();
+
           await chatParticipantRepo.delete({
-            userId: userParticipant?.userId,
-            chatId: userParticipant?.chatId,
+            userId: userParticipant.userId,
+            chatId: userParticipant.chatId,
           });
 
           return successResponse('Successfully exited chat');

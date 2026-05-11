@@ -22,6 +22,7 @@ import { Chat } from 'src/modules/chats/entities/chat.entity';
 import { ChatParticipant } from 'src/modules/chats/entities/chat-participant.entity';
 import { MessageReceipt } from 'src/modules/chats/entities/message-receipt.entity';
 import { MessageAttachment } from 'src/modules/chats/entities/message-attachment.entity';
+import { Status } from 'src/modules/status/entities/status.entity';
 dotenv.config();
 export const ormConfig: DataSourceOptions = {
   type: 'postgres',
@@ -61,6 +62,7 @@ export const ormConfig: DataSourceOptions = {
     ChatParticipant,
     MessageReceipt,
     MessageAttachment,
+    Status,
   ],
   migrations: [],
 };

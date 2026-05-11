@@ -1,5 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsNumberString, IsOptional } from 'class-validator';
+import {
+  IsDateString,
+  IsNumberString,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class FeedFilterDto {
   @ApiPropertyOptional({
@@ -89,6 +94,18 @@ export class FeedFilterDto {
   @IsOptional()
   @IsNumberString()
   limit: number;
+
+  @ApiPropertyOptional({
+    required: false,
+    type: String,
+    description:
+      'Cursor for keyset pagination. Prefer using this over page/offset at scale.Especially for general feed.',
+    example:
+      'eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTA4VDEyOjAwOjAwLjAwMFoiLCJpZCI6ImY2Li4uIn0=',
+  })
+  @IsOptional()
+  @IsString()
+  cursor?: string;
 
   // @IsOptional()
   // @IsString()

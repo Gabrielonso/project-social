@@ -37,7 +37,7 @@ export class ChatParticipant {
   @Column({ name: 'last_seen_message_id', nullable: true })
   lastSeenMessageId: string;
 
-  @CreateDateColumn({ name: 'joined_at' })
+  @CreateDateColumn({ name: 'joined_at', type: 'timestamp', nullable: true })
   joinedAt: Date;
 
   @Column({ name: 'user_id' })
@@ -56,6 +56,9 @@ export class ChatParticipant {
   chat: Chat;
 
   //>>>>>>Date related>>>>>>>>>
+  @Column({ name: 'last_read_at', nullable: true, type: 'timestamp' })
+  lastReadAt: Date;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 
