@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
-import { successResponse } from 'src/common/helpers/response.helper';
+import {
+  ApiResponse,
+  successResponse,
+} from 'src/common/helpers/response.helper';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FeedFilterDto } from './dtos/feed-filter.dto';
 import { RawFeedRow } from './types/feed.types';
@@ -9,9 +12,57 @@ import { Post } from 'src/modules/posts/entities/post.entity';
 import { FeedType } from './enums/feed-type.enum';
 import { REDIS_CLIENT } from 'src/common/redis/redis.constants';
 import Redis from 'ioredis';
+import {
+  feedBaseKey,
+  feedTagsKey,
+  publicFeedListCacheKey,
+} from './feed-cache.keys';
+
+type TagDto = {
+  id: string;
+  userId: string;
+  username: string;
+  userAvatar?: string;
+  type: string;
+  startIndex?: number;
+  endIndex?: number;
+  createdAt: string;
+};
+
+type TagRow = {
+  entity: string;
+  entity_id: string;
+  id: string;
+  user_id: string;
+  username: string;
+  user_avatar: string | null;
+  type: string;
+  start_index: number | null;
+  end_index: number | null;
+  created_at: string;
+};
+
+type FollowPairRow = {
+  follower_id: string;
+  following_id: string;
+};
+
+type LikeBookmarkRow = {
+  entity: string;
+  entity_id: string;
+};
+
+type CachedBaseEntity = {
+  id: string;
+  ownerId?: string;
+  tags?: TagDto[];
+} & Record<string, unknown>;
 
 @Injectable()
 export class FeedService {
+  private readonly baseEntityTtlSeconds = 300;
+  private readonly tagsTtlSeconds = 300;
+
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(Post)
@@ -31,12 +82,35 @@ export class FeedService {
     if (!cursor) return null;
     try {
       const raw = Buffer.from(cursor, 'base64').toString('utf8');
-      const parsed = JSON.parse(raw);
-      if (!parsed?.createdAt || !parsed?.id) return null;
-      return { createdAt: String(parsed.createdAt), id: String(parsed.id) };
+      const parsed: unknown = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+
+      const obj = parsed as Record<string, unknown>;
+
+      const createdAt = obj.createdAt;
+      const id = obj.id;
+      if (typeof createdAt !== 'string' || typeof id !== 'string') return null;
+      return { createdAt, id };
     } catch {
       return null;
     }
+  }
+
+  private async mgetJson<T>(keys: string[]): Promise<(T | null)[]> {
+    if (!keys.length) return [];
+    const raw = await this.redis.mget(keys);
+    return raw.map((v) => {
+      if (!v) return null;
+      try {
+        return JSON.parse(v) as T;
+      } catch {
+        return null;
+      }
+    });
+  }
+
+  private async setJson(key: string, value: unknown, ttlSeconds: number) {
+    await this.redis.set(key, JSON.stringify(value), 'EX', ttlSeconds);
   }
 
   async hydrateFeed(
@@ -52,31 +126,208 @@ export class FeedService {
 
     const adIds = rows.filter((r) => r.type === FeedType.AD).map((r) => r.id);
 
-    // Fetch posts exactly how you already do
-    const posts = postIds.length
+    // ----------------------------
+    // Smarter caching strategy:
+    // - cache base post/ad payloads (shared, non-viewer specific)
+    // - cache tags (shared)
+    // - compute viewer-specific flags (likes/bookmarks/follows) per request
+    // ----------------------------
+
+    // 1) Tags: fetch from cache first
+    const postTagKeys = postIds.map((id) => feedTagsKey(FeedType.POST, id));
+
+    const adTagKeys = adIds.map((id) => feedTagsKey(FeedType.AD, id));
+
+    const cachedPostTags = await this.mgetJson<TagDto[]>(postTagKeys);
+
+    const cachedAdTags = await this.mgetJson<TagDto[]>(adTagKeys);
+
+    const tagsByEntity = new Map<string, TagDto[]>();
+    const missingPostTagIds: string[] = [];
+    const missingAdTagIds: string[] = [];
+
+    for (let i = 0; i < postIds.length; i++) {
+      const id = postIds[i];
+      const tags = cachedPostTags[i];
+      if (tags) tagsByEntity.set(`${FeedType.POST}:${id}`, tags);
+      else missingPostTagIds.push(id);
+    }
+    for (let i = 0; i < adIds.length; i++) {
+      const id = adIds[i];
+      const tags = cachedAdTags[i];
+      if (tags) tagsByEntity.set(`${FeedType.AD}:${id}`, tags);
+      else missingAdTagIds.push(id);
+    }
+
+    if (missingPostTagIds.length || missingAdTagIds.length) {
+      const allTags =
+        missingPostTagIds.length || missingAdTagIds.length
+          ? await this.dataSource.query(
+              `
+              SELECT 
+                entity::text AS entity,
+                entity_id,
+                id,
+                user_id,
+                username,
+                user_avatar,
+                type,
+                start_index,
+                end_index,
+                created_at
+              FROM tags
+              WHERE 
+                (entity = 'post' AND entity_id = ANY($1))
+                OR
+                (entity = 'ad' AND entity_id = ANY($2))
+              ORDER BY created_at ASC
+              `,
+              [
+                missingPostTagIds.length ? missingPostTagIds : [null],
+                missingAdTagIds.length ? missingAdTagIds : [null],
+              ],
+            )
+          : [];
+
+      const tagMap = new Map<string, TagDto[]>();
+      for (const tag of allTags as TagRow[]) {
+        const key = `${tag.entity}:${tag.entity_id}`;
+        if (!tagMap.has(key)) tagMap.set(key, []);
+        tagMap.get(key)!.push({
+          id: tag.id,
+          userId: tag.user_id,
+          username: tag.username,
+          ...(tag.user_avatar ? { userAvatar: tag.user_avatar } : {}),
+          type: tag.type,
+          ...(tag.start_index != null ? { startIndex: tag.start_index } : {}),
+          ...(tag.end_index != null ? { endIndex: tag.end_index } : {}),
+          createdAt: tag.created_at,
+        });
+      }
+
+      // Write missing tag keys
+      const pipeline = this.redis.pipeline();
+      for (const id of missingPostTagIds) {
+        const key = `${FeedType.POST}:${id}`;
+        const tags = tagMap.get(key) || [];
+        tagsByEntity.set(key, tags);
+        pipeline.set(
+          feedTagsKey(FeedType.POST, id),
+          JSON.stringify(tags),
+          'EX',
+          this.tagsTtlSeconds,
+        );
+      }
+      for (const id of missingAdTagIds) {
+        const key = `${FeedType.AD}:${id}`;
+        const tags = tagMap.get(key) || [];
+        tagsByEntity.set(key, tags);
+        pipeline.set(
+          feedTagsKey(FeedType.AD, id),
+          JSON.stringify(tags),
+          'EX',
+          this.tagsTtlSeconds,
+        );
+      }
+      await pipeline.exec();
+    }
+
+    // 2) Base posts/ads: fetch from cache first
+    const postBaseKeys = postIds.map((id) => feedBaseKey(FeedType.POST, id));
+    console.log(postBaseKeys, 'pbk');
+    const adBaseKeys = adIds.map((id) => feedBaseKey(FeedType.AD, id));
+    console.log(adBaseKeys, 'abk');
+    const cachedPosts = await this.mgetJson<CachedBaseEntity>(postBaseKeys);
+    console.log(cachedPosts, 'cp');
+    const cachedAds = await this.mgetJson<CachedBaseEntity>(adBaseKeys);
+    console.log(cachedAds, 'ca');
+    const missingPostIds = postIds.filter((_, idx) => !cachedPosts[idx]);
+    console.log(missingPostIds, 'mp');
+    const missingAdIds = adIds.filter((_, idx) => !cachedAds[idx]);
+    console.log(missingAdIds, 'ma');
+    const fetchedPosts = missingPostIds.length
       ? await this.postRepo
           .createQueryBuilder('post')
           .leftJoinAndSelect('post.medias', 'medias')
           .leftJoinAndSelect('post.sound', 'sound')
           .select(['post', 'medias', 'sound'])
           .leftJoinAndSelect('medias.media', 'media')
-          .where('post.id IN (:...ids)', { ids: postIds })
+          .where('post.id IN (:...ids)', { ids: missingPostIds })
           .getMany()
       : [];
 
-    // Fetch ads (simple)
-    const ads = adIds.length
+    const fetchedAds = missingAdIds.length
       ? await this.adRepo
           .createQueryBuilder('ad')
           .leftJoinAndSelect('ad.medias', 'medias')
           .leftJoinAndSelect('ad.sound', 'sound')
           .select(['ad', 'medias', 'sound'])
           .leftJoinAndSelect('medias.media', 'media')
-          .where('ad.id IN (:...ids)', { ids: adIds })
+          .where('ad.id IN (:...ids)', { ids: missingAdIds })
           .getMany()
       : [];
 
-    const likes = viewerId
+    // Attach tags + cache the base entities
+    if (fetchedPosts.length || fetchedAds.length) {
+      const pipeline = this.redis.pipeline();
+      for (const p of fetchedPosts) {
+        const enriched = {
+          ...p,
+          tags: tagsByEntity.get(`${FeedType.POST}:${p.id}`) || [],
+        };
+        pipeline.set(
+          feedBaseKey(FeedType.POST, p.id),
+          JSON.stringify(enriched),
+          'EX',
+          this.baseEntityTtlSeconds,
+        );
+      }
+      for (const a of fetchedAds) {
+        const enriched = {
+          ...a,
+          tags: tagsByEntity.get(`${FeedType.AD}:${a.id}`) || [],
+        };
+        pipeline.set(
+          feedBaseKey(FeedType.AD, a.id),
+          JSON.stringify(enriched),
+          'EX',
+          this.baseEntityTtlSeconds,
+        );
+      }
+      await pipeline.exec();
+    }
+
+    // Rebuild full post/ad arrays in the same order as ids
+    const fetchedPostMap = new Map(fetchedPosts.map((p) => [p.id, p]));
+    const fetchedAdMap = new Map(fetchedAds.map((a) => [a.id, a]));
+
+    const posts: CachedBaseEntity[] = postIds
+      .map((id, idx) => {
+        const cached = cachedPosts[idx];
+        if (cached) return cached;
+        const p = fetchedPostMap.get(id);
+        if (!p) return null;
+        return {
+          ...(p as unknown as CachedBaseEntity),
+          tags: tagsByEntity.get(`${FeedType.POST}:${id}`) || [],
+        };
+      })
+      .filter((v): v is CachedBaseEntity => v != null);
+
+    const ads: CachedBaseEntity[] = adIds
+      .map((id, idx) => {
+        const cached = cachedAds[idx];
+        if (cached) return cached;
+        const a = fetchedAdMap.get(id);
+        if (!a) return null;
+        return {
+          ...(a as unknown as CachedBaseEntity),
+          tags: tagsByEntity.get(`${FeedType.AD}:${id}`) || [],
+        };
+      })
+      .filter((v): v is CachedBaseEntity => v != null);
+
+    const likes: LikeBookmarkRow[] = viewerId
       ? await this.dataSource.query(
           `
         SELECT entity, entity_id
@@ -92,7 +343,7 @@ export class FeedService {
         )
       : [];
 
-    const bookmarks = viewerId
+    const bookmarks: LikeBookmarkRow[] = viewerId
       ? await this.dataSource.query(
           `
         SELECT entity, entity_id
@@ -108,58 +359,47 @@ export class FeedService {
         )
       : [];
 
-    const allTags =
-      postIds.length || adIds.length
+    const likedSet = new Set(likes.map((l) => `${l.entity}:${l.entity_id}`));
+
+    const bookmarkedSet = new Set(
+      bookmarks.map((l) => `${l.entity}:${l.entity_id}`),
+    );
+
+    // 3) Follow flags: compute in one query per page
+    const ownerIds = viewerId
+      ? [
+          ...new Set(
+            [...posts, ...ads]
+              .map((e) => e.ownerId)
+              .filter((id: string | undefined) => !!id && id !== viewerId),
+          ),
+        ]
+      : [];
+
+    const followPairs: FollowPairRow[] =
+      viewerId && ownerIds.length
         ? await this.dataSource.query(
             `
-            SELECT 
-              entity::text AS entity,
-              entity_id,
-              id,
-              user_id,
-              username,
-              user_avatar,
-              type,
-              start_index,
-              end_index,
-              created_at
-            FROM tags
-            WHERE 
-              (entity = 'post' AND entity_id = ANY($1))
+            SELECT follower_id, following_id
+            FROM follows
+            WHERE
+              (follower_id = $1 AND following_id = ANY($2))
               OR
-              (entity = 'ad' AND entity_id = ANY($2))
-            ORDER BY created_at ASC
+              (following_id = $1 AND follower_id = ANY($2))
             `,
-            [postIds.length ? postIds : [null], adIds.length ? adIds : [null]],
+            [viewerId, ownerIds],
           )
         : [];
 
-    const tagMap = new Map<string, any[]>();
-
-    for (const tag of allTags) {
-      const key = `${tag.entity}:${tag.entity_id}`;
-
-      if (!tagMap.has(key)) {
-        tagMap.set(key, []);
+    const viewerFollows = new Set<string>();
+    const ownerFollowsViewer = new Set<string>();
+    for (const row of followPairs) {
+      if (row.follower_id === viewerId) {
+        viewerFollows.add(row.following_id);
+      } else if (row.following_id === viewerId) {
+        ownerFollowsViewer.add(row.follower_id);
       }
-
-      tagMap.get(key)!.push({
-        id: tag.id,
-        userId: tag.user_id,
-        username: tag.username,
-        userAvatar: tag.user_avatar,
-        type: tag.type,
-        startIndex: tag.start_index,
-        endIndex: tag.end_index,
-        createdAt: tag.created_at,
-      });
     }
-
-    const likedSet = new Set(likes?.map((l) => `${l?.entity}:${l?.entity_id}`));
-
-    const bookmarkedSet = new Set(
-      bookmarks?.map((l) => `${l?.entity}:${l?.entity_id}`),
-    );
 
     // Map for fast lookup
     const postMap = new Map(
@@ -169,7 +409,12 @@ export class FeedService {
           ...p,
           viewerHasLiked: likedSet.has(`${FeedType.POST}:${p.id}`),
           viewerHasBookmarked: bookmarkedSet.has(`${FeedType.POST}:${p.id}`),
-          tags: tagMap.get(`${FeedType.POST}:${p.id}`) || [],
+          viewerFollowsOwner: viewerId
+            ? viewerFollows.has(p.ownerId || '')
+            : false,
+          ownerFollowsViewer: viewerId
+            ? ownerFollowsViewer.has(p.ownerId || '')
+            : false,
         },
       ]),
     );
@@ -180,7 +425,12 @@ export class FeedService {
           ...a,
           viewerHasLiked: likedSet.has(`${FeedType.AD}:${a.id}`),
           viewerHasBookmarked: bookmarkedSet.has(`${FeedType.AD}:${a.id}`),
-          tags: tagMap.get(`${FeedType.AD}:${a.id}`) || [],
+          viewerFollowsOwner: viewerId
+            ? viewerFollows.has(a.ownerId || '')
+            : false,
+          ownerFollowsViewer: viewerId
+            ? ownerFollowsViewer.has(a.ownerId || '')
+            : false,
         },
       ]),
     );
@@ -209,20 +459,29 @@ export class FeedService {
 
   async getFeed(userId: string, feedFilterDto: FeedFilterDto) {
     const limit = Math.min(50, Number(feedFilterDto.limit) || 20);
+    console.log(feedFilterDto.cursor);
 
     // Prefer cursor pagination at scale (no OFFSET scan).
     const decoded = this.decodeCursor(feedFilterDto.cursor);
+
     const cursorCreatedAt = decoded?.createdAt;
     const cursorId = decoded?.id;
 
-    const cacheKey = `feed:v2:public:${userId || 'anon'}:${limit}:${feedFilterDto.cursor || 'first'}`;
+    const cacheKey = publicFeedListCacheKey({
+      viewerKey: userId || 'anon',
+      limit,
+      cursorToken: feedFilterDto.cursor || 'first',
+    });
+    console.log(cacheKey, 'ckey');
     const cached = await this.redis.get(cacheKey);
-    console.log(cacheKey, 'ck');
     console.log(cached, 'cached');
     if (cached) {
-      return JSON.parse(cached);
+      try {
+        return JSON.parse(cached) as ApiResponse<unknown>;
+      } catch {
+        // ignore cache parse errors
+      }
     }
-    console.log('After cached');
     const rows: RawFeedRow[] = await this.dataSource.query(
       `
       (
@@ -265,6 +524,7 @@ export class FeedService {
     const total = limit; // placeholder; avoids expensive COUNT() on hot path
 
     const response = await this.hydrateFeed(userId, rows, page, limit, total);
+    const responseData = (response.data ?? {}) as Record<string, unknown>;
 
     const last = rows[rows.length - 1];
     const nextCursor =
@@ -275,10 +535,10 @@ export class FeedService {
           })
         : null;
 
-    const withCursor = {
+    const withCursor: ApiResponse<unknown> = {
       ...response,
       data: {
-        ...(response as any).data,
+        ...responseData,
         nextCursor,
         hasMore: rows.length === limit,
       },
@@ -316,7 +576,7 @@ export class FeedService {
       [limit, offset, userId],
     );
 
-    const total = await this.dataSource.query(
+    const totalRows: Array<{ count: string }> = await this.dataSource.query(
       `SELECT COUNT(*) FROM (
   SELECT id FROM posts WHERE owner_id = $1
   UNION ALL
@@ -325,7 +585,8 @@ export class FeedService {
       [userId],
     );
 
-    return this.hydrateFeed(userId, rows, page, limit, total[0]?.count);
+    const total = Number(totalRows[0]?.count || 0);
+    return this.hydrateFeed(userId, rows, page, limit, total);
   }
 
   async getPresence(userId: string, feedFilterDto: FeedFilterDto) {
@@ -359,7 +620,7 @@ export class FeedService {
       `,
       [limit, offset, userId],
     );
-    const total = await this.dataSource.query(
+    const totalRows: Array<{ count: string }> = await this.dataSource.query(
       `SELECT COUNT(*) FROM (
       (
         SELECT
@@ -384,7 +645,8 @@ export class FeedService {
       [userId],
     );
 
-    return this.hydrateFeed(userId, rows, page, limit, total[0]?.count);
+    const total = Number(totalRows[0]?.count || 0);
+    return this.hydrateFeed(userId, rows, page, limit, total);
   }
 
   async getUsersFeed(
@@ -421,7 +683,7 @@ export class FeedService {
       `,
       [limit, offset, userId, canViewAllPosts],
     );
-    const total = await this.dataSource.query(
+    const totalRows: Array<{ count: string }> = await this.dataSource.query(
       `SELECT COUNT(*) FROM (
   SELECT id FROM posts WHERE owner_id = $1 AND ($2::boolean = true OR is_public = true)
   UNION ALL
@@ -430,7 +692,8 @@ export class FeedService {
       [userId, canViewAllPosts],
     );
 
-    return this.hydrateFeed(authUserId, rows, page, limit, total[0]?.count);
+    const total = Number(totalRows[0]?.count || 0);
+    return this.hydrateFeed(authUserId, rows, page, limit, total);
   }
 
   async getMyTaggedFeed(userId: string, feedFilterDto: FeedFilterDto) {
@@ -461,7 +724,7 @@ export class FeedService {
       [limit, offset, userId],
     );
 
-    const total = await this.dataSource.query(
+    const totalRows: Array<{ count: string }> = await this.dataSource.query(
       `SELECT COUNT(*) FROM (SELECT
           t.entity_id AS id,
           t.entity AS type,
@@ -482,7 +745,8 @@ export class FeedService {
       [userId],
     );
 
-    return this.hydrateFeed(userId, rows, page, limit, total[0]?.count);
+    const total = Number(totalRows[0]?.count || 0);
+    return this.hydrateFeed(userId, rows, page, limit, total);
   }
 
   async getUsersTaggedFeed(
@@ -517,7 +781,7 @@ export class FeedService {
       [limit, offset, userId],
     );
 
-    const total = await this.dataSource.query(
+    const totalRows: Array<{ count: string }> = await this.dataSource.query(
       `SELECT COUNT(*) FROM (SELECT
           t.entity_id AS id,
           t.entity AS type,
@@ -538,6 +802,7 @@ export class FeedService {
       [userId],
     );
 
-    return this.hydrateFeed(authUserId, rows, page, limit, total[0]?.count);
+    const total = Number(totalRows[0]?.count || 0);
+    return this.hydrateFeed(authUserId, rows, page, limit, total);
   }
 }

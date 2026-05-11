@@ -3,5 +3,6 @@ export enum MediaUploadFolder {
   ADS = 'ads',
   USERS = 'users',
   MESSAGES = 'messages',
+  STATUS = 'status',
   OTHERS = 'others',
 }

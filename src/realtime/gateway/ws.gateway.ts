@@ -6,6 +6,7 @@ import {
   MessageBody,
   ConnectedSocket,
   Ack,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -27,7 +28,7 @@ import { DeleteMessageMode } from 'src/modules/chats/enums/message.enum';
     origin: '*',
   },
 })
-export class WsGateway implements OnGatewayConnection {
+export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -57,6 +58,13 @@ export class WsGateway implements OnGatewayConnection {
       // 🔥 MARK ONLINE
       await this.presenceService.userConnected(user.id);
 
+      // 🔥 Fan-out: let chat (and anything else) sweep per-user state now
+      // that the user is reachable again. Emitted AFTER presence is set so
+      // any race with an inbound message decides "online" at send time.
+      if (user.id) {
+        this.eventBus.emit('chat.user_connected', { userId: user.id });
+      }
+
       // notify others (optional)
       // this.emitToUser(user.id, 'presence.status', {
       //   status: 'online',
@@ -64,7 +72,7 @@ export class WsGateway implements OnGatewayConnection {
       console.log(`Client connected: ${socket.id}, user: ${user.id}`);
     } catch (error) {
       console.log(error);
-      // socket.disconnect();
+      socket.disconnect();
     }
   }
   handleDisconnect(socket: Socket) {

@@ -1,5 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+import { MediaDto } from 'src/modules/media/dtos/media.dto';
 
 export class CreateStatusDto {
   @ApiPropertyOptional({
@@ -12,10 +19,11 @@ export class CreateStatusDto {
   content?: string;
 
   @ApiPropertyOptional({
-    description: 'Attach an existing media (by id)',
-    example: 'b2a77d36-3b6a-4a06-99d6-7e199bb0d4de',
+    description: 'Status media.',
+    type: MediaDto,
   })
   @IsOptional()
-  @IsUUID()
-  mediaId?: string;
+  @ValidateNested()
+  @Type(() => MediaDto)
+  media?: MediaDto;
 }

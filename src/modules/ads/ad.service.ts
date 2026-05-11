@@ -3,6 +3,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CreateAdDto } from './dtos/create-ad.dto';
@@ -17,14 +18,32 @@ import { MediaUploadFolder } from 'src/modules/media/enums/media-upload-folder.e
 import { User } from '../user/entity/user.entity';
 import { normalizeHashtags } from 'src/common/utils/hashtags.util';
 import { UpdateAdDto } from './dtos/update-ad.dto';
+import { FeedCacheInvalidationService } from '../feeds/feed-cache-invalidation.service';
 
 @Injectable()
 export class AdService {
-  constructor(private readonly dataSource: DataSource) {}
+  private readonly logger = new Logger(AdService.name);
+
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly feedCacheInvalidation: FeedCacheInvalidationService,
+  ) {}
+
+  private async safeInvalidateFeedCaches(
+    fn: () => Promise<void>,
+  ): Promise<void> {
+    try {
+      await fn();
+    } catch (err) {
+      this.logger.warn(
+        `Feed cache invalidation failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
 
   async createAd(dto: CreateAdDto, userId: string) {
     try {
-      return await this.dataSource.manager.transaction(
+      const result = await this.dataSource.manager.transaction(
         async (entityManager) => {
           const adRepo = entityManager.getRepository(Ad);
           const mediaRepo = entityManager.getRepository(Media);
@@ -149,6 +168,10 @@ export class AdService {
           return successResponse('Successfully created ad');
         },
       );
+      await this.safeInvalidateFeedCaches(() =>
+        this.feedCacheInvalidation.invalidatePublicFeedListCaches(),
+      );
+      return result;
     } catch (error) {
       throw error;
     }
@@ -178,6 +201,10 @@ export class AdService {
         updatePayload.hashtags = normalizeHashtags(dto.hashtags);
 
       await adRepo.update({ id: adId }, updatePayload);
+
+      await this.safeInvalidateFeedCaches(() =>
+        this.feedCacheInvalidation.invalidateAdAndPublicList(adId),
+      );
 
       return successResponse('Successfully updated ad');
     } catch (error) {

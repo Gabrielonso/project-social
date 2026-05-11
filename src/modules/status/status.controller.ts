@@ -28,7 +28,7 @@ export class StatusController {
   @ApiBody({ type: CreateStatusDto })
   create(@Body() dto: CreateStatusDto, @Req() req) {
     const userId: string = req.user.id;
-    return this.statusService.create(dto, userId);
+    return this.statusService.createStatus(dto, userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -60,12 +60,8 @@ export class StatusController {
   @UseGuards(JwtAuthGuard)
   @Delete(':statusId')
   @ApiOperation({ summary: 'Delete my status' })
-  delete(
-    @Param('statusId', ParseUUIDPipe) statusId: string,
-    @Req() req,
-  ) {
+  delete(@Param('statusId', ParseUUIDPipe) statusId: string, @Req() req) {
     const userId: string = req.user.id;
     return this.statusService.delete(statusId, userId);
   }
 }
-

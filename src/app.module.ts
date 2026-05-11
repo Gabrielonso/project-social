@@ -65,7 +65,7 @@ import { RedisModule } from './common/redis/redis.module';
     ChatsModule,
     RealtimeModule,
     StatusModule,
-    EventEmitterModule.forRoot(),
+    EventEmitterModule.forRoot({ global: true }),
   ],
   controllers: [AppController],
   providers: [AppService],

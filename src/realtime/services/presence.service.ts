@@ -17,18 +17,33 @@ export class PresenceService {
 
   async userConnected(userId: string) {
     const now = Date.now();
-    await this.redis.set(this.statusKey(userId), `online:${now}`, 'EX', this.presenceTtlSeconds);
+    await this.redis.set(
+      this.statusKey(userId),
+      `online:${now}`,
+      'EX',
+      this.presenceTtlSeconds,
+    );
   }
 
   async userDisconnected(userId: string) {
     const now = Date.now();
     // keep a short-lived offline marker so other services can read "recently offline"
-    await this.redis.set(this.statusKey(userId), `offline:${now}`, 'EX', this.presenceTtlSeconds);
+    await this.redis.set(
+      this.statusKey(userId),
+      `offline:${now}`,
+      'EX',
+      this.presenceTtlSeconds,
+    );
   }
 
   async markAway(userId: string) {
     const now = Date.now();
-    await this.redis.set(this.statusKey(userId), `away:${now}`, 'EX', this.presenceTtlSeconds);
+    await this.redis.set(
+      this.statusKey(userId),
+      `away:${now}`,
+      'EX',
+      this.presenceTtlSeconds,
+    );
   }
 
   async isOnline(userId: string): Promise<boolean> {
@@ -40,7 +55,8 @@ export class PresenceService {
     const raw = await this.redis.get(this.statusKey(userId));
     if (!raw) return 'offline';
     const [status] = raw.split(':', 1) as [PresenceStatus];
-    if (status === 'online' || status === 'away' || status === 'offline') return status;
+    if (status === 'online' || status === 'away' || status === 'offline')
+      return status;
     return 'offline';
   }
 
@@ -51,7 +67,12 @@ export class PresenceService {
     for (let i = 0; i < userIds.length; i++) {
       const raw = values[i];
       const status = raw ? (raw.split(':', 1)[0] as PresenceStatus) : 'offline';
-      map.set(userIds[i], status === 'online' || status === 'away' || status === 'offline' ? status : 'offline');
+      map.set(
+        userIds[i],
+        status === 'online' || status === 'away' || status === 'offline'
+          ? status
+          : 'offline',
+      );
     }
     return map;
   }

@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ChatsService } from './chats.service';
 import { ChatMessageListener } from './listeners/chat-message.listener';
-
-import { WsGateway } from 'src/realtime/gateway/ws.gateway';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { Chat } from './entities/chat.entity';

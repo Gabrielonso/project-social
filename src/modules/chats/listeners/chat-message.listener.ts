@@ -32,7 +32,7 @@ export class ChatMessageListener {
   async handleSendMessage(payload: CreateMessageDto) {
     try {
       let chatId = payload.chatId;
-
+      console.log('first got here');
       if (!chatId && !payload?.receiverUserId) {
         throw new Error('Invalid chat or receiver ID');
       }
@@ -121,9 +121,9 @@ export class ChatMessageListener {
             delivered: true,
             deliveredAt: new Date(),
           }),
-        } as any;
+        } as MessageReceipt;
       });
-
+      console.log(receiptsToSave, 'rts');
       const receipts = receiptsToSave.length
         ? await this.messageReceiptRepo.save(receiptsToSave)
         : [];
@@ -273,6 +273,21 @@ export class ChatMessageListener {
     } catch (error: unknown) {
       console.error('Read message failed:', error);
       throw error;
+    }
+  }
+
+  // Delivery sweep: when a user's socket connects we flip every still-
+  // undelivered receipt for them to delivered=true. This is the catch-up
+  // path for messages that arrived while they were offline (the send-time
+  // path in handleSendMessage only marks delivered for users who are
+  // already online when the message is created).
+  @OnEvent('chat.user_connected')
+  async handleUserConnected(payload: { userId: string }) {
+    try {
+      if (!payload?.userId) return;
+      await this.chatService.markDelivered(payload.userId);
+    } catch (error: unknown) {
+      console.error('Delivery sweep on connect failed:', error);
     }
   }
 }

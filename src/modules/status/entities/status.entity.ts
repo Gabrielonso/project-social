@@ -35,6 +35,7 @@ export class Status {
   @ManyToOne(() => Media, {
     onDelete: 'SET NULL',
     nullable: true,
+    eager: true,
   })
   media?: Media | null;
 
@@ -47,4 +48,3 @@ export class Status {
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp', select: false })
   deletedAt: Date | null;
 }
-
