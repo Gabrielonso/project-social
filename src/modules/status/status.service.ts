@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, DataSource } from 'typeorm';
+import { Repository, In, DataSource, MoreThan } from 'typeorm';
 import { Status } from './entities/status.entity';
 import { CreateStatusDto } from './dtos/create-status.dto';
 import { StatusType } from './enums/status-type.enum';
@@ -13,7 +13,6 @@ import { Media } from '../media/entities/media.entity';
 import { User } from '../user/entity/user.entity';
 import { StatusFilterDto } from './dtos/status-filter.dto';
 import { Follow } from '../engagements/entities/follow.entity';
-import { MediaType } from '../media/enums/media-type.enum';
 import { MediaUploadFolder } from '../media/enums/media-upload-folder.enum';
 import { MediaProvider } from '../media/enums/media-provider.enum';
 import { MediaStatus } from '../media/enums/media-status.enum';
@@ -131,36 +130,91 @@ export class StatusService {
     };
   }
 
-  async getFeed(ownerId: string, filter: StatusFilterDto) {
+  async getFeed(viewerId: string, filter: StatusFilterDto) {
     try {
       const page = Number(filter.page) || 1;
       const limit = Number(filter.limit) || null;
       const skip = limit ? (page - 1) * limit : 0;
 
       const follows = await this.followRepo.find({
-        where: { followerId: ownerId },
+        where: { followerId: viewerId },
         select: ['followingId'],
       });
 
       const ids = Array.from(
-        new Set([ownerId, ...follows.map((f) => f.followingId)]),
+        new Set([viewerId, ...follows.map((f) => f.followingId)]),
       );
       const now = new Date();
 
-      const [items, total] = await this.statusRepo.findAndCount({
-        where: { ownerId: In(ids) },
+      const totalOwnersRaw = await this.statusRepo
+        .createQueryBuilder('s')
+        .where('s.ownerId IN (:...ids)', { ids })
+        .andWhere('s.expiresAt > :now', { now })
+        .select('COUNT(DISTINCT s.ownerId)', 'cnt')
+        .getRawOne<{ cnt: string }>();
+      const totalOwners = parseInt(totalOwnersRaw?.cnt ?? '0', 10) || 0;
+
+      const ownersQb = this.statusRepo
+        .createQueryBuilder('s')
+        .where('s.ownerId IN (:...ids)', { ids })
+        .andWhere('s.expiresAt > :now', { now })
+        .select('s.ownerId', 'ownerId')
+        .addSelect('MAX(s.createdAt)', 'latest')
+        .groupBy('s.ownerId')
+        .orderBy('latest', 'DESC');
+
+      if (limit) {
+        ownersQb.skip(skip).take(limit);
+      }
+
+      const ownerRows = await ownersQb.getRawMany<{
+        ownerId: string;
+        latest: Date;
+      }>();
+      const orderedOwnerIds = ownerRows.map((r) => r.ownerId);
+
+      const selfIdx = orderedOwnerIds.indexOf(viewerId);
+      if (selfIdx > 0) {
+        orderedOwnerIds.splice(selfIdx, 1);
+        orderedOwnerIds.unshift(viewerId);
+      }
+
+      if (orderedOwnerIds.length === 0) {
+        return successResponse('Operation successful', {
+          currentPage: page,
+          data: [],
+          totalPages: limit ? Math.ceil(totalOwners / limit) || 1 : 1,
+        });
+      }
+
+      const statuses = await this.statusRepo.find({
+        where: { ownerId: In(orderedOwnerIds), expiresAt: MoreThan(now) },
         relations: { media: true },
-        order: { createdAt: 'DESC' },
-        skip,
-        ...(limit && { take: limit }),
+        order: { createdAt: 'ASC' },
+      });
+
+      const byOwner = new Map<string, Status[]>();
+      for (const s of statuses) {
+        const list = byOwner.get(s.ownerId) ?? [];
+        list.push(s);
+        byOwner.set(s.ownerId, list);
+      }
+
+      const data = orderedOwnerIds.map((uid) => {
+        const list = byOwner.get(uid) ?? [];
+        const first = list[0];
+        return {
+          ownerId: uid,
+          ownerUsername: first?.ownerUsername,
+          ownerAvatar: first?.ownerAvatar,
+          statuses: list,
+        };
       });
 
       return successResponse('Operation successful', {
         currentPage: page,
-        // limit,
-        // total,
-        data: items.filter((s) => s.expiresAt > now),
-        totalPages: limit ? Math.ceil(total / limit) : 1,
+        data,
+        totalPages: limit ? Math.ceil(totalOwners / limit) || 1 : 1,
       });
     } catch (error) {
       throw error;

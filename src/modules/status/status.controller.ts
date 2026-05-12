@@ -41,7 +41,10 @@ export class StatusController {
 
   @UseGuards(JwtAuthGuard)
   @Get('feed')
-  @ApiOperation({ summary: 'Get active statuses from me + following' })
+  @ApiOperation({
+    summary:
+      'Stories-style feed: active statuses from me + following, grouped by user (paginate with limit = users per page)',
+  })
   getFeed(@Query() filter: StatusFilterDto, @Req() req) {
     const userId: string = req.user.id;
     return this.statusService.getFeed(userId, filter);
