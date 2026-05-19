@@ -201,7 +201,7 @@ export class FollowsService {
   async getUserFollowers(
     userId: string,
     filter: FeedFilterDto,
-    authserId?: string,
+    authUserId?: string,
   ) {
     try {
       const page = Number(filter?.page) || 1;
@@ -229,8 +229,25 @@ export class FollowsService {
         where: { id: In(followerIds) },
       });
 
+      let data: Array<User & { iFollow?: boolean }> = followers;
+
+      if (authUserId) {
+        const authFollows = await this.followRepo.find({
+          where: {
+            followerId: authUserId,
+            followingId: In(followerIds),
+          },
+          select: ['followingId'],
+        });
+        const followingSet = new Set(authFollows.map((f) => f.followingId));
+        data = followers.map((user) => ({
+          ...user,
+          iFollow: followingSet.has(user.id),
+        }));
+      }
+
       return successResponse('Operation Successful', {
-        data: followers,
+        data,
         currentPage: page,
         totalPages: Math.max(1, Math.ceil(total / limit)),
       });
