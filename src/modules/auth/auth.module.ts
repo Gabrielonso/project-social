@@ -12,6 +12,7 @@ import { LocalStrategy } from 'src/common/strategies/local.strategy';
 import { GoogleStrategy } from 'src/common/strategies/google.strategy';
 import { JwtStrategy } from 'src/common/strategies/jwt.strategy';
 import { AccountActivityModule } from '../account-activity/account-activity.module';
+import { UserDisplayService } from '../user/user-display.service';
 
 @Module({
   providers: [
@@ -20,6 +21,7 @@ import { AccountActivityModule } from '../account-activity/account-activity.modu
     GoogleStrategy,
     JwtStrategy,
     UserService,
+    UserDisplayService,
   ],
   controllers: [AuthController],
   imports: [

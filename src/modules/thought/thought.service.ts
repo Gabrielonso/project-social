@@ -15,6 +15,13 @@ import { Thought } from './entities/thought.entity';
 import { CreateThoughtDto } from './dtos/create-thought.dto';
 import { UpdateThoughtDto } from './dtos/update-thought.dto';
 import { ThoughtsFilterDto } from './dtos/thoughts-filter.dto';
+import { UserDisplayService } from '../user/user-display.service';
+import { resolveUserDisplay } from '../user/helpers/user-display.helper';
+import { UserDisplayDto } from '../user/types/user-display.types';
+
+export type ThoughtResponse = Thought & {
+  owner: UserDisplayDto;
+};
 
 @Injectable()
 export class ThoughtService {
@@ -23,7 +30,18 @@ export class ThoughtService {
     @InjectRepository(Thought)
     private thoughtRepo: Repository<Thought>,
     private readonly accountActivityService: AccountActivityService,
+    private readonly userDisplayService: UserDisplayService,
   ) {}
+
+  private async enrichThoughts(thoughts: Thought[]): Promise<ThoughtResponse[]> {
+    const ownerIds = [...new Set(thoughts.map((thought) => thought.ownerId))];
+    const displayMap = await this.userDisplayService.getByIds(ownerIds);
+
+    return thoughts.map((thought) => ({
+      ...thought,
+      owner: resolveUserDisplay(displayMap, thought.ownerId)!,
+    }));
+  }
 
   async createThought(dto: CreateThoughtDto, userId: string) {
     try {
@@ -33,7 +51,7 @@ export class ThoughtService {
           const userRepo = entityManager.getRepository(User);
           const user = await userRepo.findOne({
             where: { id: userId },
-            select: ['id', 'username', 'profilePicture'],
+            select: ['id'],
           });
           if (!user) {
             throw new HttpException(
@@ -49,8 +67,6 @@ export class ThoughtService {
             title: dto.title,
             content: dto.content,
             ownerId: user.id,
-            ownerUsername: user.username,
-            ownerAvatar: user.profilePicture,
             isPublic: dto.isPublic ?? true,
           });
           const savedThought = await thoughtRepo.save(thought);
@@ -117,62 +133,42 @@ export class ThoughtService {
   async getMyThoughts(userId: string, thoughtFilterDto: ThoughtsFilterDto) {
     const page = Number(thoughtFilterDto.page) || 1;
     const limit = Number(thoughtFilterDto.limit) || 20;
-    const offset = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-    const data = await this.dataSource.query(
-      `
-        SELECT
-          *
-        FROM thoughts 
-        WHERE owner_id = $1
-      ORDER BY "created_at" DESC
-      LIMIT $2 OFFSET $3
-      `,
-      [userId, limit, offset],
-    );
+    const [thoughts, total] = await this.thoughtRepo.findAndCount({
+      where: { ownerId: userId },
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
 
-    const total = await this.dataSource.query(
-      `SELECT COUNT(id) FROM thoughts WHERE is_public = true`,
-    );
-
-    const ttl = total[0]?.count || 0;
     return successResponse('Operation Successful', {
-      data,
+      data: await this.enrichThoughts(thoughts),
       currentPage: page,
-      totalPages: Math.ceil(ttl / limit),
+      totalPages: Math.ceil(total / limit) || 1,
     });
   }
 
   async getUsersThoughts(
     userId: string,
     thoughtFilterDto: ThoughtsFilterDto,
-    authUserId?: string,
+    _authUserId?: string,
   ) {
     const page = Number(thoughtFilterDto.page) || 1;
     const limit = Number(thoughtFilterDto.limit) || 20;
-    const offset = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-    const data = await this.dataSource.query(
-      `
-        SELECT
-          *
-        FROM thoughts
-        WHERE owner_id = $1 AND is_public = true
-      ORDER BY "created_at" DESC
-      LIMIT $2 OFFSET $3
-      `,
-      [userId, limit, offset],
-    );
+    const [thoughts, total] = await this.thoughtRepo.findAndCount({
+      where: { ownerId: userId, isPublic: true },
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
 
-    const total = await this.dataSource.query(
-      `SELECT COUNT(id) FROM thoughts WHERE is_public = true`,
-    );
-
-    const ttl = total[0]?.count || 0;
     return successResponse('Operation Successful', {
-      data,
+      data: await this.enrichThoughts(thoughts),
       currentPage: page,
-      totalPages: Math.ceil(ttl / limit),
+      totalPages: Math.ceil(total / limit) || 1,
     });
   }
 

@@ -119,8 +119,6 @@ export class PostService {
             content: dto.caption,
             hashtags: normalizeHashtags(dto.hashtags),
             ownerId: user.id,
-            ownerUsername: user.username,
-            ownerAvatar: user.profilePicture,
             sound: soundMedia || undefined,
             allowComments: dto.allowComments ?? true,
             isPublic: dto.isPublic ?? true,
@@ -178,24 +176,16 @@ export class PostService {
               }
             }
 
-            const tagEntities = dto?.tags?.map((tag) => {
-              return tagRepo.create({
+            const tagEntities = dto.tags.map((tag) =>
+              tagRepo.create({
                 entity: FeedType.POST,
                 entityId: savedPost.id,
                 userId: tag.userId,
-                username: tag.username,
-                userAvatar: tag.userAvatar,
-                ...(tag.startIndex != null &&
-                  tag.startIndex != undefined && {
-                    startIndex: tag.startIndex,
-                  }),
-                ...(tag.endIndex != null &&
-                  tag.endIndex != undefined && {
-                    endIndex: tag.endIndex,
-                  }),
+                ...(tag.startIndex != null && { startIndex: tag.startIndex }),
+                ...(tag.endIndex != null && { endIndex: tag.endIndex }),
                 type: tag.type,
-              });
-            });
+              }),
+            );
 
             await tagRepo.save(tagEntities);
 

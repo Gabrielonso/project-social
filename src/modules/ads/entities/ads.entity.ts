@@ -26,16 +26,8 @@ export class Ad {
   @Column({ type: 'text', array: true, nullable: true })
   hashtags?: string[];
 
-  // 🔹 NEW — ownership reference
   @Column({ name: 'owner_id', nullable: true })
   ownerId: string;
-
-  // 🔹 NEW — snapshot fields for feed
-  @Column({ name: 'owner_username', nullable: true })
-  ownerUsername: string;
-
-  @Column({ name: 'owner_avatar', nullable: true })
-  ownerAvatar?: string;
 
   @Column({ name: 'target_country', type: 'text' })
   targetCountry: string;

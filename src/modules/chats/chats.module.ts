@@ -17,6 +17,7 @@ import { ChatController } from './chat.controller';
 import { MessageReceipt } from './entities/message-receipt.entity';
 import { RealtimeModule } from 'src/realtime/realtime.module';
 import { PresenceService } from 'src/realtime/services/presence.service';
+import { UserDisplayService } from '../user/user-display.service';
 
 @Module({
   providers: [
@@ -27,6 +28,7 @@ import { PresenceService } from 'src/realtime/services/presence.service';
     EventBus,
     UserService,
     PresenceService,
+    UserDisplayService,
   ],
   imports: [
     TypeOrmModule.forFeature([

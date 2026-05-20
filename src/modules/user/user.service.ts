@@ -21,6 +21,7 @@ import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { UserRoles } from 'src/common/enums/user-roles.constants';
 import { UserSocialPresenceDto } from './dto/user-social-presence.dto';
 import { AccountActivityService } from '../account-activity/account-activity.service';
+import { UserDisplayService } from './user-display.service';
 
 @Injectable()
 export class UserService {
@@ -30,6 +31,7 @@ export class UserService {
     private userRepository: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly accountActivityService: AccountActivityService,
+    private readonly userDisplayService: UserDisplayService,
   ) {
     const alphabet = '0123456789';
     this.nanoid = customAlphabet(alphabet, 16);
@@ -204,6 +206,14 @@ export class UserService {
         dob.setHours(1, 0, 0, 0);
         updateUserDto.dob = dob;
       }
+
+      const usernameChanged =
+        updateUserDto.username != null &&
+        updateUserDto.username !== user.username;
+      const profilePictureChanged =
+        updateUserDto.profilePictureUrl != null &&
+        updateUserDto.profilePictureUrl !== user.profilePicture;
+
       await this.userRepository.update(userId, {
         ...(updateUserDto.firstName &&
           updateUserDto.firstName !== undefined && {
@@ -241,19 +251,10 @@ export class UserService {
           fields: Object.keys(updateUserDto || {}),
         },
       });
-      // if (
-      //   oldUser.username !== newUser.username ||
-      //   oldUser.profilePicture !== newUser.profilePicture
-      // ) {
-      //   this.eventEmitter.emit(
-      //     'user.profile.updated',
-      //     {
-      //       userId: user.id,
-      //       username: user.username,
-      //       profilePicture: user.profilePicture,
-      //     },
-      //   );
-      // }
+
+      if (usernameChanged || profilePictureChanged) {
+        await this.userDisplayService.invalidate(userId);
+      }
 
       return {
         statusCode: HttpStatus.OK,
@@ -611,19 +612,6 @@ export class UserService {
           fields: Object.keys(userSocialPresenceDto || {}),
         },
       });
-      // if (
-      //   oldUser.username !== newUser.username ||
-      //   oldUser.profilePicture !== newUser.profilePicture
-      // ) {
-      //   this.eventEmitter.emit(
-      //     'user.profile.updated',
-      //     {
-      //       userId: user.id,
-      //       username: user.username,
-      //       profilePicture: user.profilePicture,
-      //     },
-      //   );
-      // }
 
       return {
         statusCode: HttpStatus.OK,

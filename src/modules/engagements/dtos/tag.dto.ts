@@ -4,8 +4,6 @@ import {
   IsOptional,
   IsNumber,
   Min,
-  IsString,
-  IsUrl,
   IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -19,22 +17,6 @@ export class TagDto {
   @IsUUID()
   @IsNotEmpty()
   userId: string;
-
-  @ApiProperty({
-    description: 'Username of user being tagged or mentioned',
-    example: 'grace22',
-  })
-  @IsString()
-  username: string;
-
-  @ApiPropertyOptional({
-    description: `Avatar of user being tagged/mentioned`,
-    example: 'https://...jpg',
-  })
-  @IsUrl()
-  @IsString()
-  @IsOptional()
-  userAvatar: string;
 
   @ApiProperty({
     description: 'Type of tag',

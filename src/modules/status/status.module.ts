@@ -8,10 +8,12 @@ import { StatusView } from './entities/status-view.entity';
 import { Media } from '../media/entities/media.entity';
 import { User } from '../user/entity/user.entity';
 import { Follow } from '../engagements/entities/follow.entity';
+import { UserDisplayModule } from '../user/user-display.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Status, StatusView, Media, User, Follow]),
+    UserDisplayModule,
   ],
   controllers: [StatusController],
   providers: [StatusService, StatusCleanupService],

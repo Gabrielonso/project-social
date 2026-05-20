@@ -5,10 +5,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Thought } from './entities/thought.entity';
 import { Ad } from '../ads/entities/ads.entity';
 import { AccountActivityModule } from '../account-activity/account-activity.module';
+import { UserDisplayModule } from '../user/user-display.module';
 
 @Module({
   providers: [ThoughtService],
   controllers: [ThoughtController],
-  imports: [TypeOrmModule.forFeature([Thought, Ad]), AccountActivityModule],
+  imports: [
+    TypeOrmModule.forFeature([Thought, Ad]),
+    AccountActivityModule,
+    UserDisplayModule,
+  ],
 })
 export class ThoughtModule {}

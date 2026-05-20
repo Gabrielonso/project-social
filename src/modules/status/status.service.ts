@@ -20,16 +20,19 @@ import { MediaProvider } from '../media/enums/media-provider.enum';
 import { MediaStatus } from '../media/enums/media-status.enum';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { StatusCleanupService } from './status-cleanup.service';
+import { UserDisplayService } from '../user/user-display.service';
+import { UserDisplayDto } from '../user/types/user-display.types';
+import { resolveUserDisplay } from '../user/helpers/user-display.helper';
 
 export type StatusWithViewMeta = Status & {
   viewedByMe: boolean;
   viewCount?: number;
+  owner: UserDisplayDto;
 };
 
 export type StatusFeedGroup = {
   ownerId: string;
-  ownerUsername?: string;
-  ownerAvatar?: string;
+  owner: UserDisplayDto;
   hasUnseenStatuses: boolean;
   statuses: StatusWithViewMeta[];
 };
@@ -45,6 +48,7 @@ export class StatusService {
     @InjectRepository(Follow) private readonly followRepo: Repository<Follow>,
     private readonly dataSource: DataSource,
     private readonly statusCleanup: StatusCleanupService,
+    private readonly userDisplayService: UserDisplayService,
   ) {}
 
   private getExpiryDate(hours = 24) {
@@ -151,12 +155,14 @@ export class StatusService {
   private enrichStatuses(
     statuses: Status[],
     viewedSet: Set<string>,
+    ownerDisplay: UserDisplayDto,
     viewCounts?: Map<string, number>,
   ): StatusWithViewMeta[] {
-    return statuses.map((s) => ({
-      ...s,
-      viewedByMe: viewedSet.has(s.id),
-      ...(viewCounts && { viewCount: viewCounts.get(s.id) ?? 0 }),
+    return statuses.map((status) => ({
+      ...status,
+      owner: ownerDisplay,
+      viewedByMe: viewedSet.has(status.id),
+      ...(viewCounts && { viewCount: viewCounts.get(status.id) ?? 0 }),
     }));
   }
 
@@ -174,13 +180,14 @@ export class StatusService {
             );
           }
 
-          const owner = await userRepo.findOne({ where: { id: ownerId } });
+          const owner = await userRepo.findOne({
+            where: { id: ownerId },
+            select: ['id'],
+          });
           if (!owner) throw new NotFoundException('User not found');
 
           const status = statusRepo.create({
             ownerId,
-            ownerUsername: owner.username,
-            ownerAvatar: owner.profilePicture,
             content: dto.content?.trim() || undefined,
             type: dto.content ? StatusType.THOUGHT : StatusType.MEDIA,
             expiresAt: this.getExpiryDate(24),
@@ -255,6 +262,9 @@ export class StatusService {
     const active = items.filter((s) => s.expiresAt > now);
 
     let data: StatusWithViewMeta[];
+    const ownerDisplayMap = await this.userDisplayService.getByIds([ownerId]);
+    const ownerDisplay = resolveUserDisplay(ownerDisplayMap, ownerId)!;
+
     if (viewerId) {
       const viewedSet = await this.getViewedStatusIds(
         active.map((s) => s.id),
@@ -264,9 +274,13 @@ export class StatusService {
         viewerId === ownerId
           ? await this.getViewCounts(active.map((s) => s.id))
           : undefined;
-      data = this.enrichStatuses(active, viewedSet, viewCounts);
+      data = this.enrichStatuses(active, viewedSet, ownerDisplay, viewCounts);
     } else {
-      data = active.map((s) => ({ ...s, viewedByMe: false }));
+      data = active.map((status) => ({
+        ...status,
+        owner: ownerDisplay,
+        viewedByMe: false,
+      }));
     }
 
     return {
@@ -330,6 +344,8 @@ export class StatusService {
 
       const statusIds = statuses.map((s) => s.id);
       const viewedSet = await this.getViewedStatusIds(statusIds, viewerId);
+      const ownerDisplayMap =
+        await this.userDisplayService.getByIds(orderedOwnerIds);
 
       const byOwner = new Map<string, Status[]>();
       for (const s of statuses) {
@@ -340,13 +356,12 @@ export class StatusService {
 
       const data: StatusFeedGroup[] = orderedOwnerIds.map((uid) => {
         const list = byOwner.get(uid) ?? [];
-        const first = list[0];
+        const owner = resolveUserDisplay(ownerDisplayMap, uid)!;
         return {
           ownerId: uid,
-          ownerUsername: first?.ownerUsername,
-          ownerAvatar: first?.ownerAvatar,
+          owner,
           hasUnseenStatuses: unseenOwners.has(uid),
-          statuses: this.enrichStatuses(list, viewedSet),
+          statuses: this.enrichStatuses(list, viewedSet, owner),
         };
       });
 
@@ -405,9 +420,13 @@ export class StatusService {
     });
 
     const data = views.map((v) => ({
-      viewerId: v.viewerId,
-      username: v.viewer?.username,
-      profilePicture: v.viewer?.profilePicture,
+      viewer: {
+        id: v.viewerId,
+        username: v.viewer?.username ?? 'unknown',
+        ...(v.viewer?.profilePicture
+          ? { profilePicture: v.viewer.profilePicture }
+          : {}),
+      },
       viewedAt: v.viewedAt,
     }));
 

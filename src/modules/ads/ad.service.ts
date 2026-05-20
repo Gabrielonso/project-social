@@ -51,7 +51,7 @@ export class AdService {
           const userRepo = entityManager.getRepository(User);
           const user = await userRepo.findOne({
             where: { id: userId },
-            select: ['id', 'username', 'profilePicture'],
+            select: ['id'],
           });
           if (!user) {
             throw new HttpException(
@@ -100,8 +100,6 @@ export class AdService {
 
           const ad = adRepo.create({
             ownerId: user.id,
-            ownerUsername: user.username,
-            ownerAvatar: user.profilePicture,
             content: dto.description,
             hashtags: normalizeHashtags(dto.hashtags),
             targetCountry: dto.country,

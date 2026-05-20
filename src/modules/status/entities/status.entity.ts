@@ -20,12 +20,6 @@ export class Status {
   @Column({ name: 'owner_id' })
   ownerId: string;
 
-  @Column({ name: 'owner_username', nullable: true })
-  ownerUsername?: string;
-
-  @Column({ name: 'owner_avatar', nullable: true })
-  ownerAvatar?: string;
-
   @Column({ type: 'enum', enum: StatusType, default: StatusType.MEDIA })
   type: StatusType;
 

@@ -16,6 +16,11 @@ import { Post } from 'src/modules/posts/entities/post.entity';
 import { User } from 'src/modules/user/entity/user.entity';
 import { NotificationService } from 'src/modules/notification/notification.service';
 import { NotificationTemplates } from 'src/modules/notification/notification.templates';
+import { UserDisplayService } from 'src/modules/user/user-display.service';
+import {
+  collectUserIds,
+  resolveUserDisplay,
+} from 'src/modules/user/helpers/user-display.helper';
 
 @Injectable()
 export class CommentsService {
@@ -24,7 +29,26 @@ export class CommentsService {
     private readonly commentRepo: Repository<Comment>,
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
+    private readonly userDisplayService: UserDisplayService,
   ) {}
+
+  private async enrichComments(comments: Comment[]) {
+    const userIds = collectUserIds(
+      comments.map((comment) => comment.userId),
+      comments.map((comment) => comment.replyToUserId),
+    );
+    const displayMap = await this.userDisplayService.getByIds(userIds);
+
+    return comments.map((comment) => ({
+      ...comment,
+      author: resolveUserDisplay(displayMap, comment.userId)!,
+      ...(comment.replyToUserId
+        ? {
+            replyTo: resolveUserDisplay(displayMap, comment.replyToUserId),
+          }
+        : {}),
+    }));
+  }
 
   async createComment(dto: CreateCommentDto, userId: string) {
     try {
@@ -47,8 +71,6 @@ export class CommentsService {
         const comment = manager.create(Comment, {
           ...dto,
           userId,
-          username: user.username,
-          userAvatar: user.profilePicture,
         });
 
         await manager.save(comment);
@@ -92,7 +114,10 @@ export class CommentsService {
         order: { createdAt: 'DESC' },
       });
 
-      return successResponse('Operation successful', comments);
+      return successResponse(
+        'Operation successful',
+        await this.enrichComments(comments),
+      );
     } catch (error) {
       throw error;
     }
@@ -118,7 +143,7 @@ export class CommentsService {
         const userRepo = manager.getRepository(User);
         const user = await userRepo.findOne({
           where: { id: userId },
-          select: ['id', 'username', 'profilePicture'],
+          select: ['id', 'username'],
         });
         if (!user) {
           throw new HttpException(
@@ -135,12 +160,8 @@ export class CommentsService {
           entityId: repliedComment.entityId,
           parentId,
           userId,
-          username: user.username,
-          userAvatar: user.profilePicture,
           content,
           replyToUserId: repliedComment.userId,
-          replyToUsername: repliedComment.username,
-          replyToUserAvatar: repliedComment.userAvatar,
           replyToCommentId: repliedComment.id,
         });
         if (repliedComment?.parentId) {
@@ -175,7 +196,10 @@ export class CommentsService {
         },
         order: { createdAt: 'ASC' },
       });
-      return successResponse('Operation successful', replies);
+      return successResponse(
+        'Operation successful',
+        await this.enrichComments(replies),
+      );
     } catch (error) {
       throw error;
     }

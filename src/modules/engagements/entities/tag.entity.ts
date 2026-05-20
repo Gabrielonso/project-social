@@ -23,12 +23,6 @@ export class Tag {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ nullable: true })
-  username: string;
-
-  @Column({ name: 'user_avatar', nullable: true })
-  userAvatar?: string;
-
   @Column({ type: 'enum', default: TagType.TAG, enum: TagType })
   type: TagType;
 

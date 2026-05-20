@@ -9,6 +9,7 @@ import { AccountActivityService } from 'src/modules/account-activity/account-act
 import { AccountActivity } from 'src/modules/account-activity/entities/account-activity.entity';
 import { EventBus } from 'src/events/event-bus.service';
 import { PresenceService } from './services/presence.service';
+import { UserDisplayService } from 'src/modules/user/user-display.service';
 
 @Module({
   imports: [JwtModule, TypeOrmModule.forFeature([User, AccountActivity])],
@@ -19,6 +20,7 @@ import { PresenceService } from './services/presence.service';
     AccountActivityService,
     EventBus,
     PresenceService,
+    UserDisplayService,
   ],
   exports: [WsGateway],
 })

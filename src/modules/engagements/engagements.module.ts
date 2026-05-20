@@ -8,6 +8,7 @@ import { Comment } from './entities/comment.entity';
 import { Bookmark } from './entities/bookmark.entity';
 import { BookmarksService } from './services/bookmarks.services';
 import { NotificationModule } from '../notification/notification.module';
+import { UserDisplayModule } from '../user/user-display.module';
 
 @Module({
   providers: [LikesService, CommentsService, BookmarksService],
@@ -15,6 +16,7 @@ import { NotificationModule } from '../notification/notification.module';
   imports: [
     TypeOrmModule.forFeature([Like, Comment, Bookmark]),
     NotificationModule,
+    UserDisplayModule,
   ],
 })
 export class EngagementsModule {}

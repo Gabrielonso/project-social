@@ -10,6 +10,7 @@ import { Post } from '../posts/entities/post.entity';
 import { Ad } from '../ads/entities/ads.entity';
 import { AccountActivityModule } from '../account-activity/account-activity.module';
 import { NotificationModule } from '../notification/notification.module';
+import { UserDisplayModule } from './user-display.module';
 
 @Module({
   controllers: [UserController],
@@ -19,6 +20,7 @@ import { NotificationModule } from '../notification/notification.module';
     TypeOrmModule.forFeature([User, Follow, Post, Ad]),
     AccountActivityModule,
     NotificationModule,
+    UserDisplayModule,
   ],
 })
 export class UserModule {}

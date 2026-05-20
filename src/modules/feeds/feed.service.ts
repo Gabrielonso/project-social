@@ -24,6 +24,13 @@ import {
   feedTagsKey,
   publicFeedListCacheKey,
 } from './feed-cache.keys';
+import { UserDisplayService } from '../user/user-display.service';
+import {
+  collectUserIds,
+  resolveUserDisplay,
+  stripLegacyOwnerFields,
+} from '../user/helpers/user-display.helper';
+import { UserDisplay } from '../user/types/user-display.types';
 
 @Injectable()
 export class FeedService {
@@ -37,6 +44,7 @@ export class FeedService {
     @InjectRepository(Ad)
     private adRepo: Repository<Ad>,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly userDisplayService: UserDisplayService,
   ) {}
 
   private encodeCursor(input: { createdAt: string; id: string }) {
@@ -78,6 +86,41 @@ export class FeedService {
 
   private async setJson(key: string, value: unknown, ttlSeconds: number) {
     await this.redis.set(key, JSON.stringify(value), 'EX', ttlSeconds);
+  }
+
+  private enrichFeedEntity<T extends CachedBaseEntity>(
+    entity: T,
+    displayMap: Map<string, UserDisplay>,
+  ) {
+    const base = stripLegacyOwnerFields(entity as Record<string, unknown>);
+    const tags = ((entity.tags as TagDto[] | undefined) ?? []).map((tag) => {
+      const user = resolveUserDisplay(displayMap, tag.userId);
+      return {
+        ...tag,
+        user: user!,
+      };
+    });
+
+    return {
+      ...base,
+      owner: resolveUserDisplay(displayMap, entity.ownerId as string | undefined),
+      tags,
+    };
+  }
+
+  private collectFeedUserIds(
+    posts: CachedBaseEntity[],
+    ads: CachedBaseEntity[],
+  ): string[] {
+    const tagUserIds = [...posts, ...ads].flatMap((entity) =>
+      ((entity.tags as TagDto[] | undefined) ?? []).map((tag) => tag.userId),
+    );
+
+    return collectUserIds(
+      posts.map((post) => post.ownerId as string | undefined),
+      ads.map((ad) => ad.ownerId as string | undefined),
+      tagUserIds,
+    );
   }
 
   async hydrateFeed(
@@ -136,8 +179,6 @@ export class FeedService {
                 entity_id,
                 id,
                 user_id,
-                username,
-                user_avatar,
                 type,
                 start_index,
                 end_index,
@@ -163,8 +204,6 @@ export class FeedService {
         tagMap.get(key)!.push({
           id: tag.id,
           userId: tag.user_id,
-          username: tag.username,
-          ...(tag.user_avatar ? { userAvatar: tag.user_avatar } : {}),
           type: tag.type,
           ...(tag.start_index != null ? { startIndex: tag.start_index } : {}),
           ...(tag.end_index != null ? { endIndex: tag.end_index } : {}),
@@ -368,12 +407,16 @@ export class FeedService {
       }
     }
 
+    const displayMap = await this.userDisplayService.getByIds(
+      this.collectFeedUserIds(posts, ads),
+    );
+
     // Map for fast lookup
     const postMap = new Map(
       posts.map((p) => [
         p.id,
         {
-          ...p,
+          ...this.enrichFeedEntity(p, displayMap),
           viewerHasLiked: likedSet.has(`${FeedType.POST}:${p.id}`),
           viewerHasBookmarked: bookmarkedSet.has(`${FeedType.POST}:${p.id}`),
           viewerFollowsOwner: viewerId
@@ -389,7 +432,7 @@ export class FeedService {
       ads.map((a) => [
         a.id,
         {
-          ...a,
+          ...this.enrichFeedEntity(a, displayMap),
           viewerHasLiked: likedSet.has(`${FeedType.AD}:${a.id}`),
           viewerHasBookmarked: bookmarkedSet.has(`${FeedType.AD}:${a.id}`),
           viewerFollowsOwner: viewerId
