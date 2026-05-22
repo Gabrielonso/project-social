@@ -17,6 +17,9 @@ import { DeleteMessageDto } from '../dtos/delete-message.dto';
 import { ChatMessage } from '../entities/chat-message.entity';
 import { DeleteMessageMode } from '../enums/message.enum';
 import { MediaUploadFolder } from 'src/modules/media/enums/media-upload-folder.enum';
+import { NotificationDispatcher } from 'src/modules/notification/notification.dispatcher';
+import { NotificationEventType } from 'src/modules/notification/interfaces/notification-event.types';
+import { User } from 'src/modules/user/entity/user.entity';
 
 @Injectable()
 export class ChatMessageListener {
@@ -25,7 +28,10 @@ export class ChatMessageListener {
     private readonly chatService: ChatsService,
     @InjectRepository(MessageReceipt)
     private messageReceiptRepo: Repository<MessageReceipt>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     private presenceService: PresenceService,
+    private readonly notificationDispatcher: NotificationDispatcher,
   ) {}
 
   @OnEvent('chat.send_message')
@@ -128,7 +134,27 @@ export class ChatMessageListener {
         ? await this.messageReceiptRepo.save(receiptsToSave)
         : [];
 
+      const sender = await this.userRepo.findOne({
+        where: { id: payload.userId },
+        select: ['id', 'username'],
+      });
+
       for (const userId of recipientIds) {
+        const status = statusMap.get(userId) || 'offline';
+        if (status === 'offline' || status === 'away') {
+          await this.notificationDispatcher.notify({
+            event: NotificationEventType.CHAT_MESSAGE,
+            recipientId: userId,
+            actorId: payload.userId,
+            context: {
+              actorUsername: sender?.username,
+              chatId,
+              messageId: message.id,
+              messagePreview: message.text?.slice(0, 80),
+            },
+          });
+        }
+
         this.wsGateway.emitToUser(userId, 'chat.new_message', {
           success: true,
           data: message,

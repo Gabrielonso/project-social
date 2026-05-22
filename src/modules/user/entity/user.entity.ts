@@ -154,6 +154,9 @@ export class User {
   @Column({ name: 'allow_beep', type: 'boolean', default: true, select: false })
   allowBeep: boolean;
 
+  @Column({ name: 'notification_enabled', type: 'boolean', default: true })
+  notificationEnabled: boolean;
+
   @Column({
     name: 'read_receipts',
     type: 'boolean',

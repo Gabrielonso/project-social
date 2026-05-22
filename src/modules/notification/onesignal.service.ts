@@ -1,17 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PushNotificationData } from 'src/common/enums/jobs.enum';
 import { request } from 'src/common/utils/globals';
 
 export type SendPushParams = {
   userId: string;
   title: string;
   body: string;
+  data?: PushNotificationData;
 };
 
 export type SendPushBatchParams = {
   userIds: string[];
   title: string;
   body: string;
+  data?: PushNotificationData;
 };
 
 @Injectable()
@@ -44,6 +47,9 @@ export class OneSignalService {
         contents: { en: params.body },
         headings: { en: params.title },
         include_aliases: { external_id: [params.userId] },
+        ...(params.data && Object.keys(params.data).length
+          ? { data: params.data }
+          : {}),
       },
       'POST',
     );
@@ -75,6 +81,9 @@ export class OneSignalService {
         contents: { en: params.body },
         headings: { en: params.title },
         include_aliases: { external_id: params.userIds },
+        ...(params.data && Object.keys(params.data).length
+          ? { data: params.data }
+          : {}),
       },
       'POST',
     );

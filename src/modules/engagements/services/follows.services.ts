@@ -10,8 +10,8 @@ import { User } from 'src/modules/user/entity/user.entity';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { FeedFilterDto } from 'src/modules/feeds/dtos/feed-filter.dto';
 import { AccountActivityService } from 'src/modules/account-activity/account-activity.service';
-import { NotificationService } from 'src/modules/notification/notification.service';
-import { NotificationTemplates } from 'src/modules/notification/notification.templates';
+import { NotificationDispatcher } from 'src/modules/notification/notification.dispatcher';
+import { NotificationEventType } from 'src/modules/notification/interfaces/notification-event.types';
 
 @Injectable()
 export class FollowsService {
@@ -22,7 +22,7 @@ export class FollowsService {
     private readonly userRepo: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly accountActivityService: AccountActivityService,
-    private readonly notificationService: NotificationService,
+    private readonly notificationDispatcher: NotificationDispatcher,
   ) {}
 
   async followUser(currentUserId: string, targetUserId: string) {
@@ -69,16 +69,12 @@ export class FollowsService {
           select: ['id', 'username'],
         });
 
-        if (targetUserId !== currentUserId) {
-          const tpl = NotificationTemplates.followed({
-            followerUsername: follower?.username,
-          });
-          await this.notificationService.notifyUser({
-            userId: targetUserId,
-            title: tpl.title,
-            body: tpl.body,
-          });
-        }
+        await this.notificationDispatcher.notify({
+          event: NotificationEventType.FOLLOW,
+          recipientId: targetUserId,
+          actorId: currentUserId,
+          context: { actorUsername: follower?.username },
+        });
 
         return successResponse('Successfully followed user');
       });

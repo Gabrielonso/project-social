@@ -16,14 +16,20 @@ export class NotificationProcessor extends WorkerHost {
 
   async process(job: Job<SendPushJob>) {
     if (job.name === JobType.SEND_PUSH_NOTIFICATION) {
-      const { userId, title, body } = job.data as SendPushJob;
-      await this.oneSignalService.sendPush({ userId, title, body });
+      const { userId, title, body, data } = job.data as SendPushJob;
+      await this.oneSignalService.sendPush({ userId, title, body, data });
       return;
     }
 
     if (job.name === JobType.SEND_PUSH_NOTIFICATION_BATCH) {
-      const { userIds, title, body } = job.data as unknown as SendPushBatchJob;
-      await this.oneSignalService.sendPushBatch({ userIds, title, body });
+      const { userIds, title, body, data } =
+        job.data as unknown as SendPushBatchJob;
+      await this.oneSignalService.sendPushBatch({
+        userIds,
+        title,
+        body,
+        data,
+      });
       return;
     }
   }

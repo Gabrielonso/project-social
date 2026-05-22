@@ -17,6 +17,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRoles } from 'src/common/enums/user-roles.constants';
 import { RoleGuard } from 'src/common/guards/role.guard';
 import { SendNotificationDto } from './dto/send-notifications.dto';
+import { UserNotificationToggleDto } from './dto/notifications.dto';
 
 @ApiBearerAuth()
 @Controller('notifications')
@@ -52,6 +53,20 @@ export class NotificationController {
   readAllNotifications(@Req() req) {
     const userId = req?.user?.id;
     return this.notificationService.readAllNotifications(userId);
+  }
+
+  @Patch('/preferences')
+  @ApiOperation({ summary: 'Update push notification preference' })
+  @ApiBody({ type: UserNotificationToggleDto })
+  updateNotificationPreference(
+    @Req() req,
+    @Body() dto: UserNotificationToggleDto,
+  ) {
+    const userId = req?.user?.id;
+    return this.notificationService.updateNotificationPreference(
+      userId,
+      dto.notificationEnabled,
+    );
   }
 
   @Post('/test/push')

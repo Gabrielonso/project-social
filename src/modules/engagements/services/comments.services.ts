@@ -14,8 +14,8 @@ import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { Post } from 'src/modules/posts/entities/post.entity';
 import { User } from 'src/modules/user/entity/user.entity';
-import { NotificationService } from 'src/modules/notification/notification.service';
-import { NotificationTemplates } from 'src/modules/notification/notification.templates';
+import { NotificationDispatcher } from 'src/modules/notification/notification.dispatcher';
+import { NotificationEventType } from 'src/modules/notification/interfaces/notification-event.types';
 import { UserDisplayService } from 'src/modules/user/user-display.service';
 import {
   collectUserIds,
@@ -28,7 +28,7 @@ export class CommentsService {
     @InjectRepository(Comment)
     private readonly commentRepo: Repository<Comment>,
     private readonly dataSource: DataSource,
-    private readonly notificationService: NotificationService,
+    private readonly notificationDispatcher: NotificationDispatcher,
     private readonly userDisplayService: UserDisplayService,
   ) {}
 
@@ -77,23 +77,13 @@ export class CommentsService {
 
         await this.incrementCommentCounter(manager, dto.entity, dto.entityId);
 
-        if (dto.entity === FeedType.POST) {
-          const post = await manager.getRepository(Post).findOne({
-            where: { id: dto.entityId },
-            select: ['id', 'ownerId'],
-          });
-
-          if (post?.ownerId && post.ownerId !== userId) {
-            const tpl = NotificationTemplates.postCommented({
-              commenterUsername: user.username,
-            });
-            await this.notificationService.notifyUser({
-              userId: post.ownerId,
-              title: tpl.title,
-              body: tpl.body,
-            });
-          }
-        }
+        await this.notifyFeedComment(
+          manager,
+          dto.entity,
+          dto.entityId,
+          userId,
+          user.username,
+        );
 
         return successResponse(`Successfully commented on ${dto.entity}`);
       });
@@ -180,6 +170,19 @@ export class CommentsService {
           repliedComment.entity,
           repliedComment.entityId,
         );
+
+        await this.notificationDispatcher.notify({
+          event: NotificationEventType.COMMENT_REPLY,
+          recipientId: repliedComment.userId,
+          actorId: userId,
+          context: {
+            actorUsername: user.username,
+            entity: repliedComment.entity,
+            entityId: repliedComment.entityId,
+            commentId: repliedComment.id,
+          },
+        });
+
         return successResponse('Successfully replied comment');
       });
     } catch (error) {
@@ -291,6 +294,45 @@ export class CommentsService {
     commentId: string,
   ) {
     return manager.decrement(Comment, { id: commentId }, 'replyCount', 1);
+  }
+
+  private async notifyFeedComment(
+    manager: EntityManager,
+    entity: FeedType,
+    entityId: string,
+    userId: string,
+    commenterUsername?: string,
+  ) {
+    const event = this.notificationDispatcher.eventForFeedComment(entity);
+    if (!event) return;
+
+    let ownerId: string | undefined;
+    if (entity === FeedType.POST) {
+      const post = await manager.getRepository(Post).findOne({
+        where: { id: entityId },
+        select: ['id', 'ownerId'],
+      });
+      ownerId = post?.ownerId;
+    } else if (entity === FeedType.AD) {
+      const ad = await manager.getRepository(Ad).findOne({
+        where: { id: entityId },
+        select: ['id', 'ownerId'],
+      });
+      ownerId = ad?.ownerId;
+    }
+
+    if (!ownerId || ownerId === userId) return;
+
+    await this.notificationDispatcher.notify({
+      event,
+      recipientId: ownerId,
+      actorId: userId,
+      context: {
+        actorUsername: commenterUsername,
+        entity,
+        entityId,
+      },
+    });
   }
 
   private async validateFeedEntity(

@@ -20,6 +20,10 @@ export class NotificationsIdsDto {
 }
 
 export class UserNotificationToggleDto {
+  @ApiProperty({
+    description: 'Whether push notifications are enabled for this user',
+    example: true,
+  })
   @IsNotEmpty()
   @IsBoolean()
   notificationEnabled: boolean;

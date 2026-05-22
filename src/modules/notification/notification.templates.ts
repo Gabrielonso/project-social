@@ -23,5 +23,39 @@ export const NotificationTemplates = {
       ? `${args.taggerUsername} tagged you in a post`
       : 'You were tagged in a post',
   }),
+  mentionedInPost: (args: { taggerUsername?: string }) => ({
+    title: 'You were mentioned',
+    body: args.taggerUsername
+      ? `${args.taggerUsername} mentioned you in a post`
+      : 'Someone mentioned you in a post',
+  }),
+  commentReply: (args: { replierUsername?: string }) => ({
+    title: 'New reply',
+    body: args.replierUsername
+      ? `${args.replierUsername} replied to your comment`
+      : 'Someone replied to your comment',
+  }),
+  adLiked: (args: { likerUsername?: string }) => ({
+    title: 'New like',
+    body: args.likerUsername
+      ? `${args.likerUsername} liked your ad`
+      : 'Someone liked your ad',
+  }),
+  adCommented: (args: { commenterUsername?: string }) => ({
+    title: 'New comment',
+    body: args.commenterUsername
+      ? `${args.commenterUsername} commented on your ad`
+      : 'Someone commented on your ad',
+  }),
+  chatMessage: (args: {
+    senderUsername?: string;
+    messagePreview?: string;
+  }) => {
+    const preview = args.messagePreview?.trim();
+    const sender = args.senderUsername || 'Someone';
+    return {
+      title: sender,
+      body: preview || 'Sent you a message',
+    };
+  },
 };
-

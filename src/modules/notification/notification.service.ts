@@ -16,6 +16,12 @@ import { JobQueue, JobType } from 'src/common/enums/jobs.enum';
 import { Queue } from 'bullmq';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { NotificationQueryFilterDto } from './dto/notification-filter.dto';
+import {
+  NotificationEventType,
+  NotificationMetadata,
+  NotifyUserParams,
+} from './interfaces/notification-event.types';
+import { PushNotificationData } from 'src/common/enums/jobs.enum';
 
 @Injectable()
 export class NotificationService {
@@ -66,26 +72,63 @@ export class NotificationService {
     return successResponse('Successfully read all notifications');
   }
 
-  async notifyUser(params: { userId: string; title: string; body: string }) {
+  async notifyUser(params: NotifyUserParams) {
+    const sendPush = params.sendPush !== false;
     const notification = this.notificationRepo.create({
       userId: params.userId,
       title: params.title,
       body: params.body,
+      type: params.type ?? null,
+      metadata: params.metadata ?? null,
     });
     await this.notificationRepo.save(notification);
 
-    await this.notificationsQueue.add(
-      JobType.SEND_PUSH_NOTIFICATION,
-      { userId: params.userId, title: params.title, body: params.body },
-      {
-        removeOnComplete: true,
-        removeOnFail: false,
-        attempts: 5,
-        backoff: { type: 'exponential', delay: 3000 },
-      },
-    );
+    if (sendPush) {
+      const data = this.buildPushData(params.type, params.metadata);
+      await this.notificationsQueue.add(
+        JobType.SEND_PUSH_NOTIFICATION,
+        {
+          userId: params.userId,
+          title: params.title,
+          body: params.body,
+          data,
+        },
+        {
+          removeOnComplete: true,
+          removeOnFail: false,
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 3000 },
+        },
+      );
+    }
 
     return successResponse('Operation Successful');
+  }
+
+  async updateNotificationPreference(
+    userId: string,
+    notificationEnabled: boolean,
+  ) {
+    await this.userRepo.update({ id: userId }, { notificationEnabled });
+    return successResponse('Notification preference updated', {
+      notificationEnabled,
+    });
+  }
+
+  private buildPushData(
+    type?: NotificationEventType,
+    metadata?: NotificationMetadata,
+  ): PushNotificationData | undefined {
+    if (!type && !metadata) return undefined;
+    const data: PushNotificationData = {};
+    if (type) data.type = type;
+    if (metadata?.actorId) data.actorId = metadata.actorId;
+    if (metadata?.entity) data.entity = String(metadata.entity);
+    if (metadata?.entityId) data.entityId = metadata.entityId;
+    if (metadata?.chatId) data.chatId = metadata.chatId;
+    if (metadata?.messageId) data.messageId = metadata.messageId;
+    if (metadata?.commentId) data.commentId = metadata.commentId;
+    return Object.keys(data).length ? data : undefined;
   }
 
   async sendNotificationToUsers(dto: SendNotificationDto) {

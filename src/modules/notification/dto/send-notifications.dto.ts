@@ -44,7 +44,7 @@ export function IsUUIDOrEmailArray(validationOptions?: ValidationOptions) {
 export class SendNotificationDto {
   @ApiPropertyOptional({
     description: `Title of Notification`,
-    example: 'Greetings!!!',
+    example: 'Greetings!!!🫡',
   })
   @IsOptional()
   @MaxLength(50)
@@ -52,7 +52,7 @@ export class SendNotificationDto {
 
   @ApiProperty({
     description: 'Body of Notification',
-    example: 'Hello Guys,\nWelcome to BlueBeep🎉.\nThis is a test message',
+    example: 'Hello Guys,\nWelcome to BlueBeep🎉.\nThis is a test message✌🏽😉',
   })
   @IsNotEmpty()
   @MaxLength(300)

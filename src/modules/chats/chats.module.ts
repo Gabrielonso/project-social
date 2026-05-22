@@ -18,6 +18,7 @@ import { MessageReceipt } from './entities/message-receipt.entity';
 import { RealtimeModule } from 'src/realtime/realtime.module';
 import { PresenceService } from 'src/realtime/services/presence.service';
 import { UserDisplayService } from '../user/user-display.service';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   providers: [
@@ -40,6 +41,7 @@ import { UserDisplayService } from '../user/user-display.service';
     ]),
     AccountActivityModule,
     RealtimeModule,
+    NotificationModule,
   ],
   controllers: [ChatController],
 })

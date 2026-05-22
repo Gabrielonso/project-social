@@ -8,14 +8,22 @@ import { BullModule } from '@nestjs/bullmq';
 import { JobQueue } from 'src/common/enums/jobs.enum';
 import { OneSignalService } from './onesignal.service';
 import { NotificationProcessor } from './notification.processor';
+import { NotificationDispatcher } from './notification.dispatcher';
+import { RedisModule } from 'src/common/redis/redis.module';
 
 @Module({
   controllers: [NotificationController],
-  providers: [NotificationService, OneSignalService, NotificationProcessor],
+  providers: [
+    NotificationService,
+    NotificationDispatcher,
+    OneSignalService,
+    NotificationProcessor,
+  ],
   imports: [
     TypeOrmModule.forFeature([Notification, User]),
     BullModule.registerQueue({ name: JobQueue.NOTIFICATIONS }),
+    RedisModule,
   ],
-  exports: [NotificationService],
+  exports: [NotificationService, NotificationDispatcher],
 })
 export class NotificationModule {}

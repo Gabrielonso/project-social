@@ -25,8 +25,8 @@ import { UpdatePostDto } from './dtos/update-post.dto';
 import { TagType } from '../engagements/enums/tag-type.enum';
 import { Tag } from '../engagements/entities/tag.entity';
 import { AccountActivityService } from '../account-activity/account-activity.service';
-import { NotificationService } from '../notification/notification.service';
-import { NotificationTemplates } from '../notification/notification.templates';
+import { NotificationDispatcher } from '../notification/notification.dispatcher';
+import { TagDto } from '../engagements/dtos/tag.dto';
 import { FeedCacheInvalidationService } from '../feeds/feed-cache-invalidation.service';
 
 @Injectable()
@@ -40,9 +40,36 @@ export class PostService {
     @InjectRepository(Ad)
     private adRepo: Repository<Ad>,
     private readonly accountActivityService: AccountActivityService,
-    private readonly notificationService: NotificationService,
+    private readonly notificationDispatcher: NotificationDispatcher,
     private readonly feedCacheInvalidation: FeedCacheInvalidationService,
   ) {}
+
+  private async notifyPostTags(
+    authorId: string,
+    authorUsername: string | undefined,
+    postId: string,
+    tags: TagDto[],
+  ) {
+    const notified = new Set<string>();
+    for (const tag of tags) {
+      const key = `${tag.userId}:${tag.type}`;
+      if (!tag.userId || tag.userId === authorId || notified.has(key)) {
+        continue;
+      }
+      notified.add(key);
+      await this.notificationDispatcher.notify({
+        event: this.notificationDispatcher.eventForTagType(tag.type),
+        recipientId: tag.userId,
+        actorId: authorId,
+        context: {
+          actorUsername: authorUsername,
+          entity: FeedType.POST,
+          entityId: postId,
+          tagType: tag.type,
+        },
+      });
+    }
+  }
 
   private async safeInvalidateFeedCaches(
     fn: () => Promise<void>,
@@ -189,23 +216,7 @@ export class PostService {
 
             await tagRepo.save(tagEntities);
 
-            const tpl = NotificationTemplates.taggedInPost({
-              taggerUsername: user.username,
-            });
-
-            const uniqueTaggedUserIds = [
-              ...new Set((dto.tags || []).map((t) => t.userId)),
-            ].filter((id) => id && id !== userId);
-
-            await Promise.all(
-              uniqueTaggedUserIds.map((taggedUserId) =>
-                this.notificationService.notifyUser({
-                  userId: taggedUserId,
-                  title: tpl.title,
-                  body: tpl.body,
-                }),
-              ),
-            );
+            await this.notifyPostTags(userId, user.username, savedPost.id, dto.tags);
           }
 
           // enqueue processing ONLY for S3 videos
@@ -270,6 +281,58 @@ export class PostService {
       if (dto.location !== undefined) updatePayload.location = dto.location;
 
       await this.postRepo.update({ id: postId }, updatePayload);
+
+      if (dto.tags?.length) {
+        await this.dataSource.transaction(async (manager) => {
+          const tagRepo = manager.getRepository(Tag);
+          const user = await manager.getRepository(User).findOne({
+            where: { id: userId },
+            select: ['id', 'username'],
+          });
+          if (!user) return;
+
+          for (const tag of dto.tags || []) {
+            if (tag.type === TagType.MENTION) {
+              if (tag.startIndex == null || tag.endIndex == null) {
+                throw new BadRequestException(
+                  'Mentions must include startIndex and endIndex',
+                );
+              }
+            }
+          }
+
+          const existingTags = await tagRepo.find({
+            where: { entity: FeedType.POST, entityId: postId },
+            select: ['userId'],
+          });
+          const existingUserIds = new Set(
+            existingTags.map((t) => t.userId),
+          );
+
+          const newTags = (dto.tags || []).filter(
+            (t) => t.userId && !existingUserIds.has(t.userId),
+          );
+          if (!newTags.length) return;
+
+          const tagEntities = newTags.map((tag) =>
+            tagRepo.create({
+              entity: FeedType.POST,
+              entityId: postId,
+              userId: tag.userId,
+              ...(tag.startIndex != null && { startIndex: tag.startIndex }),
+              ...(tag.endIndex != null && { endIndex: tag.endIndex }),
+              type: tag.type,
+            }),
+          );
+          await tagRepo.save(tagEntities);
+          await this.notifyPostTags(
+            userId,
+            user.username,
+            postId,
+            newTags,
+          );
+        });
+      }
 
       await this.accountActivityService.log({
         userId,

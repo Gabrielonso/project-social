@@ -19,14 +19,18 @@ export interface SendEmailJob {
   html?: string;
 }
 
+export type PushNotificationData = Record<string, string>;
+
 export interface SendPushJob {
   userId: string;
   title: string;
   body: string;
+  data?: PushNotificationData;
 }
 
 export interface SendPushBatchJob {
   userIds: string[];
   title: string;
   body: string;
+  data?: PushNotificationData;
 }
