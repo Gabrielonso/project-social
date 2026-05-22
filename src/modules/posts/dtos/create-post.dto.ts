@@ -82,7 +82,7 @@ class SoundMediaDto {
 }
 
 export class CreatePostDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Caption of post',
     example:
       'Global Talent Hunt 2.0 is an exciting opportunity that allows talents from all over the world to have access to everything... blah blah blah. Come and hangout with @peter, @james and @john',
