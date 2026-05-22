@@ -14,10 +14,10 @@ export class Follow {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'follower_id' })
+  @Column({ name: 'follower_id', type: 'uuid' })
   followerId: string;
 
-  @Column({ name: 'following_id' })
+  @Column({ name: 'following_id', type: 'uuid' })
   followingId: string;
 
   @CreateDateColumn({ name: 'created_at' })

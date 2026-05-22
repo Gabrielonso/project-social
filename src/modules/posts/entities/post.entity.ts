@@ -24,7 +24,7 @@ export class Post {
   @Column({ type: 'text', array: true, nullable: true })
   hashtags?: string[];
 
-  @Column({ name: 'owner_id', nullable: true })
+  @Column({ name: 'owner_id', type: 'uuid', nullable: true })
   ownerId: string;
 
   @Column({ name: 'like_count', default: 0 })

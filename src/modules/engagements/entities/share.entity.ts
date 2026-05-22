@@ -16,10 +16,10 @@ export class Share {
   @Column({ name: 'target_type', type: 'enum', enum: FeedType })
   entity: FeedType;
 
-  @Column({ name: 'target_id' })
+  @Column({ name: 'target_id', type: 'uuid' })
   entityId: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
   @Column({ name: 'share_type', default: 'internal' })

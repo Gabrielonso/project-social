@@ -17,10 +17,10 @@ export class Like {
   @Column({ type: 'enum', enum: FeedType })
   entity: FeedType;
 
-  @Column({ name: 'entity_id' })
+  @Column({ name: 'entity_id', type: 'uuid' })
   entityId: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
   @CreateDateColumn({ name: 'created_at' })

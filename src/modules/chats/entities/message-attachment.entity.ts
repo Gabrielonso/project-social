@@ -12,7 +12,7 @@ export class MessageAttachment {
   })
   message: ChatMessage;
 
-  @Column({ name: 'message_id' })
+  @Column({ name: 'message_id', type: 'uuid' })
   messageId: string;
 
   @ManyToOne(() => Media, {

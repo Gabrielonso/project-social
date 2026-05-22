@@ -14,10 +14,10 @@ export class Block {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'blocker_id' })
+  @Column({ name: 'blocker_id', type: 'uuid' })
   blockerId: string;
 
-  @Column({ name: 'blocked_id' })
+  @Column({ name: 'blocked_id', type: 'uuid' })
   blockedId: string;
 
   @CreateDateColumn({ name: 'created_at' })

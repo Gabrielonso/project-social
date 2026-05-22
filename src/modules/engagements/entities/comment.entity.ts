@@ -18,22 +18,22 @@ export class Comment {
   @Column({ type: 'enum', enum: FeedType })
   entity: FeedType;
 
-  @Column({ name: 'target_id' })
+  @Column({ name: 'target_id', type: 'uuid' })
   entityId: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ nullable: true, name: 'parent_id' })
+  @Column({ nullable: true, name: 'parent_id', type: 'uuid' })
   parentId?: string;
 
-  @Column({ name: 'reply_to_user_id', nullable: true })
+  @Column({ name: 'reply_to_user_id', type: 'uuid', nullable: true })
   replyToUserId?: string;
 
-  @Column({ name: 'reply_to_comment_id', nullable: true })
+  @Column({ name: 'reply_to_comment_id', type: 'uuid', nullable: true })
   replyToCommentId?: string;
 
   @Column({ name: 'reply_count', default: 0 })
@@ -45,7 +45,7 @@ export class Comment {
   @Column({ name: 'deleted_at', nullable: true })
   deletedAt?: Date;
 
-  @Column({ name: 'deleted_by', nullable: true })
+  @Column({ name: 'deleted_by', type: 'uuid', nullable: true })
   deletedBy?: string; // admin or userId
 
   @CreateDateColumn({ name: 'create_at' })

@@ -17,7 +17,7 @@ export class Status {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'owner_id' })
+  @Column({ name: 'owner_id', type: 'uuid' })
   ownerId: string;
 
   @Column({ type: 'enum', enum: StatusType, default: StatusType.MEDIA })

@@ -25,6 +25,7 @@ import { ChatsModule } from './modules/chats/chats.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { StatusModule } from './modules/status/status.module';
+import { SearchModule } from './modules/search/search.module';
 import { RedisModule } from './common/redis/redis.module';
 
 @Module({
@@ -65,6 +66,7 @@ import { RedisModule } from './common/redis/redis.module';
     ChatsModule,
     RealtimeModule,
     StatusModule,
+    SearchModule,
     EventEmitterModule.forRoot({ global: true }),
   ],
   controllers: [AppController],

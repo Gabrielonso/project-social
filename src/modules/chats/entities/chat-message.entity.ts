@@ -22,7 +22,7 @@ export class ChatMessage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'chat_id' })
+  @Column({ name: 'chat_id', type: 'uuid', nullable: true })
   chatId: string;
 
   @ManyToOne(() => Chat, (chat) => chat.chat_messages, {
@@ -30,7 +30,7 @@ export class ChatMessage {
   })
   chat: Chat;
 
-  @Column({ name: 'sender_id' })
+  @Column({ name: 'sender_id', type: 'uuid', nullable: true })
   senderId: string;
 
   @ManyToOne(() => User, { onDelete: 'SET NULL' })

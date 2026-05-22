@@ -26,7 +26,7 @@ export class Ad {
   @Column({ type: 'text', array: true, nullable: true })
   hashtags?: string[];
 
-  @Column({ name: 'owner_id', nullable: true })
+  @Column({ name: 'owner_id', type: 'uuid', nullable: true })
   ownerId: string;
 
   @Column({ name: 'target_country', type: 'text' })

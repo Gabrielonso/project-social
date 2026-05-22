@@ -17,10 +17,10 @@ export class Tag {
   @Column({ name: 'entity', type: 'enum', enum: FeedType })
   entity: FeedType;
 
-  @Column({ name: 'entity_id' })
+  @Column({ name: 'entity_id', type: 'uuid' })
   entityId: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
   @Column({ type: 'enum', default: TagType.TAG, enum: TagType })

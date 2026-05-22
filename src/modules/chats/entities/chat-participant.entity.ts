@@ -34,16 +34,16 @@ export class ChatParticipant {
   // @Column({ name: 'unread_count', default: 0 })
   // unreadCount: number;
 
-  @Column({ name: 'last_seen_message_id', nullable: true })
+  @Column({ name: 'last_seen_message_id', type: 'uuid', nullable: true })
   lastSeenMessageId: string;
 
   @CreateDateColumn({ name: 'joined_at', type: 'timestamp', nullable: true })
   joinedAt: Date;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  @Column({ name: 'chat_id' })
+  @Column({ name: 'chat_id', type: 'uuid' })
   chatId: string;
 
   //>>>>>>>>Relations >>>>>>>>>>

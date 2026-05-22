@@ -7,10 +7,10 @@ export class MessageReceipt {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'message_id' })
+  @Column({ name: 'message_id', type: 'uuid', nullable: true })
   messageId: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'uuid', nullable: true })
   userId: string;
 
   @ManyToOne(() => ChatMessage, { onDelete: 'CASCADE' })

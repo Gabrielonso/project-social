@@ -18,7 +18,7 @@ export class Thought {
   @Column({ type: 'text', nullable: true })
   content: string;
 
-  @Column({ name: 'owner_id', nullable: true })
+  @Column({ name: 'owner_id', type: 'uuid', nullable: true })
   ownerId: string;
 
   @Column({ name: 'is_public', default: true })

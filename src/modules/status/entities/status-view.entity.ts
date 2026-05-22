@@ -19,14 +19,14 @@ export class StatusView {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'status_id' })
+  @Column({ name: 'status_id', type: 'uuid' })
   statusId: string;
 
   @ManyToOne(() => Status, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'status_id' })
   status: Status;
 
-  @Column({ name: 'viewer_id' })
+  @Column({ name: 'viewer_id', type: 'uuid' })
   viewerId: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
