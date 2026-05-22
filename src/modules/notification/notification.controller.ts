@@ -13,6 +13,10 @@ import { NotificationsIdsDto } from './dto/notifications.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { NotificationQueryFilterDto } from './dto/notification-filter.dto';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { UserRoles } from 'src/common/enums/user-roles.constants';
+import { RoleGuard } from 'src/common/guards/role.guard';
+import { SendNotificationDto } from './dto/send-notifications.dto';
 
 @ApiBearerAuth()
 @Controller('notifications')
@@ -68,5 +72,14 @@ export class NotificationController {
       title: body.title,
       body: body.body,
     });
+  }
+
+  @UseGuards(RoleGuard)
+  @Roles([UserRoles.ADMIN, UserRoles.SUPER_ADMIN])
+  @Post('send-notification')
+  @ApiOperation({ summary: 'Send push notification to users. Admin only' })
+  @ApiBody({ type: SendNotificationDto })
+  sendNotificationsToUsers(@Body() payload: SendNotificationDto) {
+    return this.notificationService.sendNotificationToUsers(payload);
   }
 }
