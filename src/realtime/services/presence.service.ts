@@ -6,7 +6,7 @@ export type PresenceStatus = 'online' | 'away' | 'offline';
 
 @Injectable()
 export class PresenceService {
-  // Keep presence ephemeral; clients should heartbeat/reconnect.
+  /** TTL refreshed on connect, heartbeat, and WS activity while socket is open. */
   private readonly presenceTtlSeconds = 120;
 
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
@@ -44,6 +44,21 @@ export class PresenceService {
       'EX',
       this.presenceTtlSeconds,
     );
+  }
+
+  /**
+   * Extends Redis TTL for the current status.
+   * Keeps `away` as away; refreshes `online`; restores `online` if the key expired
+   * but the client is still connected and sending events.
+   */
+  async refreshPresence(userId: string): Promise<PresenceStatus> {
+    const status = await this.getStatus(userId);
+    if (status === 'away') {
+      await this.markAway(userId);
+      return 'away';
+    }
+    await this.userConnected(userId);
+    return 'online';
   }
 
   async isOnline(userId: string): Promise<boolean> {

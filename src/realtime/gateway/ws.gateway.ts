@@ -94,9 +94,19 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(`user:${userId}`).emit(event, payload);
   }
 
+  /** Keeps Redis presence in sync while the socket stays open (extends TTL). */
+  private touchPresence(userId: string | undefined) {
+    if (!userId) return;
+    void this.presenceService.refreshPresence(userId);
+  }
+
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('chat.join')
-  join(@MessageBody() { chatId }: any, @ConnectedSocket() socket: Socket) {
+  join(
+    @MessageBody() { chatId }: any,
+    @ConnectedSocket() socket: Socket,
+  ) {
+    this.touchPresence(socket.data.user?.id);
     socket.join(`chat:${chatId}`);
   }
 
@@ -108,6 +118,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Ack() ack: (response: any) => void,
   ) {
     try {
+      this.touchPresence(user.id);
       this.eventBus.emit('chat.send_message', {
         ...payload,
         userId: user.id,
@@ -132,6 +143,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Ack() ack: (response: any) => void,
   ) {
     try {
+      this.touchPresence(user.id);
       if (!payload.messageId || !payload.text) {
         return ack(
           wsFailure(
@@ -158,6 +170,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage('chat.delete_message')
   deleteMessage(
     @MessageBody()
@@ -166,6 +179,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Ack() ack: (response: any) => void,
   ) {
     try {
+      this.touchPresence(user.id);
       if (!payload.messageId || !payload.mode) {
         return ack(
           wsFailure(
@@ -218,6 +232,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @CurrentUser() user: any,
     @ConnectedSocket() socket: Socket,
   ) {
+    this.touchPresence(user.id);
     socket.to(`chat:${chatId}`).emit('chat.typing', {
       userId: user.id,
     });
@@ -231,6 +246,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Ack() ack: (response: any) => void,
   ) {
     try {
+      this.touchPresence(user.id);
       this.eventBus.emit('chat.read', {
         ...payload,
         userId: user.id,
@@ -244,6 +260,75 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const errorCodeMesssage =
         error instanceof Error ? error.message : 'UNKNOWN_ERROR';
       ack(wsFailure('chat.read_ack', 'READ_CHAT_FAILED', errorCodeMesssage));
+    }
+  }
+
+  /**
+   * Client should emit when the app is backgrounded or the user is idle
+   * but the socket remains connected (e.g. AppState "background").
+   */
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('presence.away')
+  async setPresenceAway(
+    @CurrentUser() user: Auth,
+    @Ack() ack: (response: any) => void,
+  ) {
+    try {
+      await this.presenceService.markAway(user.id);
+      this.emitToUser(user.id, 'presence.status', { status: 'away' });
+      ack(wsSuccess('presence.away_ack', { status: 'away' }));
+    } catch (error) {
+      const errorCodeMesssage =
+        error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+      ack(wsFailure('presence.away_ack', 'AWAY_FAILED', errorCodeMesssage));
+    }
+  }
+
+  /**
+   * Client should emit when returning to the foreground after presence.away.
+   * Refreshes online TTL and runs the undelivered-message delivery sweep.
+   */
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('presence.active')
+  async setPresenceActive(
+    @CurrentUser() user: Auth,
+    @Ack() ack: (response: any) => void,
+  ) {
+    try {
+      await this.presenceService.userConnected(user.id);
+      this.eventBus.emit('chat.user_connected', { userId: user.id });
+      this.emitToUser(user.id, 'presence.status', { status: 'online' });
+      ack(wsSuccess('presence.active_ack', { status: 'online' }));
+    } catch (error) {
+      const errorCodeMesssage =
+        error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+      ack(wsFailure('presence.active_ack', 'ACTIVE_FAILED', errorCodeMesssage));
+    }
+  }
+
+  /**
+   * Optional explicit ping (e.g. every 45–60s while foreground).
+   * Any chat/presence event also refreshes TTL via touchPresence.
+   */
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('presence.heartbeat')
+  async presenceHeartbeat(
+    @CurrentUser() user: Auth,
+    @Ack() ack: (response: any) => void,
+  ) {
+    try {
+      const status = await this.presenceService.refreshPresence(user.id);
+      ack(wsSuccess('presence.heartbeat_ack', { status }));
+    } catch (error) {
+      const errorCodeMesssage =
+        error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+      ack(
+        wsFailure(
+          'presence.heartbeat_ack',
+          'HEARTBEAT_FAILED',
+          errorCodeMesssage,
+        ),
+      );
     }
   }
 
