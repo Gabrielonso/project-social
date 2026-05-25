@@ -2,7 +2,9 @@ import {
   ForbiddenException,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
+  forwardRef,
 } from '@nestjs/common';
 import { ChatParticipant } from './entities/chat-participant.entity';
 import { Brackets, DataSource, In, Repository } from 'typeorm';
@@ -24,6 +26,8 @@ import { MediaProvider } from '../media/enums/media-provider.enum';
 import { MessageAttachment } from './entities/message-attachment.entity';
 import { MediaStatus } from '../media/enums/media-status.enum';
 import { Media } from '../media/entities/media.entity';
+import { MessageKind } from './enums/message-kind.enum';
+import { UserDisplayService } from '../user/user-display.service';
 
 @Injectable()
 export class ChatsService {
@@ -35,9 +39,11 @@ export class ChatsService {
     private chatParticipantRepo: Repository<ChatParticipant>,
     @InjectRepository(MessageReceipt)
     private messageReceiptRepo: Repository<MessageReceipt>,
+    @Inject(forwardRef(() => WsGateway))
     private readonly wsGateway: WsGateway,
     @InjectRepository(Chat)
     private chatRepo: Repository<Chat>,
+    private readonly userDisplayService: UserDisplayService,
   ) {}
 
   generateChatKey(user1: string, user2: string) {
@@ -360,14 +366,67 @@ export class ChatsService {
         });
       }
 
+      const enriched = await this.enrichCallMessages(messages);
+
       return successResponse('Operation Successful', {
-        data: messages,
+        data: enriched,
         currentPage: page,
         totalPages: limit ? Math.ceil(total / limit) : 1,
       });
     } catch (error) {
       throw error;
     }
+  }
+
+  private async enrichCallMessages(messages: ChatMessage[]) {
+    const callMessages = messages.filter((m) => m.kind === MessageKind.CALL);
+    if (!callMessages.length) {
+      return messages;
+    }
+
+    const userIds = new Set<string>();
+    for (const message of callMessages) {
+      const meta = message.metadata as
+        | { callerId?: string; calleeId?: string }
+        | undefined;
+      if (meta?.callerId) userIds.add(meta.callerId);
+      if (meta?.calleeId) userIds.add(meta.calleeId);
+    }
+
+    const displayMap = await this.userDisplayService.getByIds([...userIds]);
+
+    return messages.map((message) => {
+      if (message.kind !== MessageKind.CALL) {
+        return message;
+      }
+      const meta = message.metadata as {
+        callerId?: string;
+        calleeId?: string;
+      };
+      const callerId = meta?.callerId;
+      const calleeId = meta?.calleeId;
+      return {
+        ...message,
+        participants: {
+          caller: callerId
+            ? {
+                id: callerId,
+                username: displayMap.get(callerId)?.username ?? null,
+                profilePicture:
+                  displayMap.get(callerId)?.profilePicture ?? null,
+              }
+            : null,
+          callee: calleeId
+            ? {
+                id: calleeId,
+                username: displayMap.get(calleeId)?.username ?? null,
+                profilePicture:
+                  displayMap.get(calleeId)?.profilePicture ?? null,
+              }
+            : null,
+        },
+      };
+    });
   }
 
   async getChatParticipants(chatId: string): Promise<ChatParticipant[]> {

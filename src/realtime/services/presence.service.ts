@@ -66,6 +66,12 @@ export class PresenceService {
     return status === 'online';
   }
 
+  /** Socket is likely open (foreground or background with presence.away). */
+  async isReachableViaSocket(userId: string): Promise<boolean> {
+    const status = await this.getStatus(userId);
+    return status === 'online' || status === 'away';
+  }
+
   async getStatus(userId: string): Promise<PresenceStatus> {
     const raw = await this.redis.get(this.statusKey(userId));
     if (!raw) return 'offline';

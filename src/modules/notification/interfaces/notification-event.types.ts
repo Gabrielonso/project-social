@@ -9,6 +9,7 @@ export enum NotificationEventType {
   POST_TAG = 'post_tag',
   POST_MENTION = 'post_mention',
   CHAT_MESSAGE = 'chat_message',
+  INCOMING_CALL = 'incoming_call',
   AD_LIKED = 'ad_liked',
   AD_COMMENTED = 'ad_commented',
 }

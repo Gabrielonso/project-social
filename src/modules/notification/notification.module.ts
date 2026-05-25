@@ -24,6 +24,6 @@ import { RedisModule } from 'src/common/redis/redis.module';
     BullModule.registerQueue({ name: JobQueue.NOTIFICATIONS }),
     RedisModule,
   ],
-  exports: [NotificationService, NotificationDispatcher],
+  exports: [NotificationService, NotificationDispatcher, OneSignalService],
 })
 export class NotificationModule {}

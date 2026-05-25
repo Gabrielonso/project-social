@@ -96,6 +96,11 @@ export class NotificationDispatcher {
           senderUsername: username,
           messagePreview: context.messagePreview,
         });
+      case NotificationEventType.INCOMING_CALL:
+        return NotificationTemplates.incomingCall({
+          callerUsername: username,
+          callType: context.messagePreview,
+        });
       default:
         return { title: 'Notification', body: 'You have a new notification' };
     }

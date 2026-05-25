@@ -13,7 +13,12 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Auth } from 'src/common/interfaces/auth.interface';
 import { EventBus } from 'src/events/event-bus.service';
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards, forwardRef } from '@nestjs/common';
+import { CallService } from 'src/modules/calls/services/call.service';
+import { InitiateCallDto } from 'src/modules/calls/dto/initiate-call.dto';
+import { AcceptCallDto } from 'src/modules/calls/dto/accept-call.dto';
+import { RejectCallDto } from 'src/modules/calls/dto/reject-call.dto';
+import { EndCallDto } from 'src/modules/calls/dto/end-call.dto';
 import { WsAuthGuard } from '../guards/ws-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { wsFailure, wsSuccess } from 'src/common/helpers/response.helper';
@@ -37,6 +42,8 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly configService: ConfigService,
     private presenceService: PresenceService,
     private readonly eventBus: EventBus,
+    @Inject(forwardRef(() => CallService))
+    private readonly callService: CallService,
   ) {}
 
   async handleConnection(socket: Socket) {
@@ -63,6 +70,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // any race with an inbound message decides "online" at send time.
       if (user.id) {
         this.eventBus.emit('chat.user_connected', { userId: user.id });
+        void this.callService.onUserConnected(user.id).catch(() => undefined);
       }
 
       // notify others (optional)
@@ -102,10 +110,7 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('chat.join')
-  join(
-    @MessageBody() { chatId }: any,
-    @ConnectedSocket() socket: Socket,
-  ) {
+  join(@MessageBody() { chatId }: any, @ConnectedSocket() socket: Socket) {
     this.touchPresence(socket.data.user?.id);
     socket.join(`chat:${chatId}`);
   }
@@ -359,4 +364,35 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //     });
   //   }
   // }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('call.initiate')
+  callInitiate(
+    @MessageBody() payload: InitiateCallDto,
+    @CurrentUser() user: Auth,
+  ) {
+    this.touchPresence(user.id);
+    void this.callService.initiate(user.id, payload);
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('call.accept')
+  callAccept(@MessageBody() payload: AcceptCallDto, @CurrentUser() user: Auth) {
+    this.touchPresence(user.id);
+    void this.callService.accept(user.id, payload);
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('call.reject')
+  callReject(@MessageBody() payload: RejectCallDto, @CurrentUser() user: Auth) {
+    this.touchPresence(user.id);
+    void this.callService.reject(user.id, payload.uuid);
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('call.end')
+  callEnd(@MessageBody() payload: EndCallDto, @CurrentUser() user: Auth) {
+    this.touchPresence(user.id);
+    void this.callService.end(user.id, payload);
+  }
 }

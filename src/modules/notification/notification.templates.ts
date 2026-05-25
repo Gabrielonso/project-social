@@ -47,6 +47,12 @@ export const NotificationTemplates = {
       ? `${args.commenterUsername} commented on your ad`
       : 'Someone commented on your ad',
   }),
+  incomingCall: (args: { callerUsername?: string; callType?: string }) => ({
+    title: 'Incoming call',
+    body: args.callerUsername
+      ? `${args.callerUsername} is calling you`
+      : 'Someone is calling you',
+  }),
   chatMessage: (args: {
     senderUsername?: string;
     messagePreview?: string;

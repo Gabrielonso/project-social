@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { MessageReceipt } from './message-receipt.entity';
 import { MessageAttachment } from './message-attachment.entity';
+import { MessageKind } from '../enums/message-kind.enum';
 
 @Entity('chat_messages')
 export class ChatMessage {
@@ -41,6 +42,13 @@ export class ChatMessage {
 
   @Column({ type: 'text', nullable: true })
   text: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: MessageKind,
+    default: MessageKind.TEXT,
+  })
+  kind: MessageKind;
 
   @OneToMany(() => MessageAttachment, (pm) => pm.message, {
     cascade: true,

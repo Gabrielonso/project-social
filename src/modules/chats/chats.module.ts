@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ChatsService } from './chats.service';
 import { ChatMessageListener } from './listeners/chat-message.listener';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -18,6 +18,7 @@ import { MessageReceipt } from './entities/message-receipt.entity';
 import { RealtimeModule } from 'src/realtime/realtime.module';
 import { PresenceService } from 'src/realtime/services/presence.service';
 import { UserDisplayService } from '../user/user-display.service';
+import { UserDisplayModule } from '../user/user-display.module';
 import { NotificationModule } from '../notification/notification.module';
 
 @Module({
@@ -40,9 +41,11 @@ import { NotificationModule } from '../notification/notification.module';
       MessageReceipt,
     ]),
     AccountActivityModule,
-    RealtimeModule,
+    forwardRef(() => RealtimeModule),
     NotificationModule,
+    UserDisplayModule,
   ],
   controllers: [ChatController],
+  exports: [ChatsService],
 })
 export class ChatsModule {}

@@ -23,6 +23,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { ThoughtModule } from './modules/thought/thought.module';
 import { ChatsModule } from './modules/chats/chats.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { CallsModule } from './modules/calls/calls.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { StatusModule } from './modules/status/status.module';
 import { SearchModule } from './modules/search/search.module';
@@ -65,6 +66,7 @@ import { RedisModule } from './common/redis/redis.module';
     ThoughtModule,
     ChatsModule,
     RealtimeModule,
+    CallsModule,
     StatusModule,
     SearchModule,
     EventEmitterModule.forRoot({ global: true }),

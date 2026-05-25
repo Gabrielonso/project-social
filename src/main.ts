@@ -9,7 +9,7 @@ import { ConfigureSwagger } from './config/swagger-config';
 import { RedisIoAdapter } from './realtime/redis-io.adapter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   const configService = app.get(ConfigService);
 

@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
+import { CallsModule } from 'src/modules/calls/calls.module';
 import { WsGateway } from './gateway/ws.gateway';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from 'src/modules/auth/auth.service';
@@ -12,7 +13,11 @@ import { PresenceService } from './services/presence.service';
 import { UserDisplayService } from 'src/modules/user/user-display.service';
 
 @Module({
-  imports: [JwtModule, TypeOrmModule.forFeature([User, AccountActivity])],
+  imports: [
+    JwtModule,
+    TypeOrmModule.forFeature([User, AccountActivity]),
+    forwardRef(() => CallsModule),
+  ],
   providers: [
     WsGateway,
     AuthService,
@@ -22,6 +27,6 @@ import { UserDisplayService } from 'src/modules/user/user-display.service';
     PresenceService,
     UserDisplayService,
   ],
-  exports: [WsGateway],
+  exports: [WsGateway, PresenceService],
 })
 export class RealtimeModule {}
