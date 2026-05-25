@@ -22,7 +22,7 @@ export class LiveKitWebhookController {
     const rawBody =
       typeof req.rawBody === 'string'
         ? req.rawBody
-        : req.rawBody?.toString('utf8') ?? '';
+        : (req.rawBody?.toString('utf8') ?? '');
     await this.liveKitWebhookService.handleWebhook(rawBody, authorization);
     return { ok: true };
   }

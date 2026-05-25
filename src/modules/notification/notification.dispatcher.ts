@@ -78,7 +78,9 @@ export class NotificationDispatcher {
           commenterUsername: username,
         });
       case NotificationEventType.COMMENT_REPLY:
-        return NotificationTemplates.commentReply({ replierUsername: username });
+        return NotificationTemplates.commentReply({
+          replierUsername: username,
+        });
       case NotificationEventType.POST_TAG:
         return NotificationTemplates.taggedInPost({ taggerUsername: username });
       case NotificationEventType.POST_MENTION:
@@ -126,8 +128,7 @@ export class NotificationDispatcher {
     event: NotificationEventType,
     metadata: NotificationMetadata,
   ): string | null {
-    const entityId =
-      metadata.entityId || metadata.chatId || metadata.commentId;
+    const entityId = metadata.entityId || metadata.chatId || metadata.commentId;
     if (!entityId) return null;
     return `notify:dedupe:${recipientId}:${event}:${entityId}`;
   }

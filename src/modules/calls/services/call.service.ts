@@ -107,6 +107,7 @@ export class CallService {
 
     const displayMap = await this.userDisplayService.getByIds([callerId]);
     const callerUsername = displayMap.get(callerId)?.username ?? 'Unknown';
+    const callerAvatar = displayMap.get(callerId)?.profilePicture ?? '';
 
     const calleeStatus = await this.presenceService.getStatus(calleeId);
     const incomingPayload = {
@@ -115,6 +116,7 @@ export class CallService {
       callerUsername,
       type,
       roomName,
+      callerAvatar,
     };
 
     if (await this.presenceService.isReachableViaSocket(calleeId)) {
@@ -127,6 +129,7 @@ export class CallService {
         uuid,
         roomName,
         type,
+        callerAvatar,
       });
     }
 
@@ -273,6 +276,7 @@ export class CallService {
         callerUsername: displayMap.get(session.callerId)?.username ?? 'Unknown',
         type: session.type,
         roomName: session.roomName,
+        callerAvatar: displayMap.get(session.callerId)?.profilePicture ?? '',
       });
     }
   }
@@ -369,6 +373,7 @@ export class CallService {
     uuid: string;
     roomName: string;
     type: string;
+    callerAvatar: string;
   }): Promise<void> {
     await this.oneSignalService.sendPush({
       userId: params.calleeId,
@@ -381,6 +386,7 @@ export class CallService {
         callerId: params.callerId,
         callerUsername: params.callerUsername,
         callType: params.type,
+        callerAvatar: params.callerAvatar ?? '',
       },
     });
   }

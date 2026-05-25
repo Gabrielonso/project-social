@@ -7,6 +7,8 @@ import { CallSessionService } from './services/call-session.service';
 import { CallLogService } from './services/call-log.service';
 import { LiveKitWebhookService } from './services/livekit-webhook.service';
 import { LiveKitWebhookController } from './controllers/livekit-webhook.controller';
+import { CallsController } from './controllers/calls.controller';
+import { CallHistoryService } from './services/call-history.service';
 import { CallSession } from './entities/call-session.entity';
 import { User } from '../user/entity/user.entity';
 import { Block } from '../engagements/entities/block.entity';
@@ -27,12 +29,13 @@ import { RedisModule } from 'src/common/redis/redis.module';
     forwardRef(() => ChatsModule),
     TypeOrmModule.forFeature([CallSession, User, Block, ChatMessage]),
   ],
-  controllers: [LiveKitWebhookController],
+  controllers: [LiveKitWebhookController, CallsController],
   providers: [
     CallService,
     LiveKitService,
     CallSessionService,
     CallLogService,
+    CallHistoryService,
     LiveKitWebhookService,
   ],
   exports: [CallService],

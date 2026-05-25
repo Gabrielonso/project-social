@@ -163,7 +163,7 @@ export class CallLogService {
     const ended =
       leftTimes.length > 0
         ? Math.max(...leftTimes)
-        : session.signalingEndedAt?.getTime() ?? Date.now();
+        : (session.signalingEndedAt?.getTime() ?? Date.now());
 
     return Math.max(0, Math.floor((ended - started) / 1000));
   }
