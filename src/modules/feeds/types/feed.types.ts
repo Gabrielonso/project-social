@@ -3,8 +3,13 @@ import { UserDisplayDto } from '../../user/types/user-display.types';
 
 export type RawFeedRow = {
   id: string;
-  type: FeedType;
+  type: FeedType | 'repost';
   createdAt: Date;
+  repostedById?: string;
+};
+
+export type RepostRow = {
+  post_id: string;
 };
 
 export type TagDto = {

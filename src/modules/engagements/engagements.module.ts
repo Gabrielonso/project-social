@@ -7,14 +7,16 @@ import { CommentsService } from './services/comments.services';
 import { Comment } from './entities/comment.entity';
 import { Bookmark } from './entities/bookmark.entity';
 import { BookmarksService } from './services/bookmarks.services';
+import { Repost } from './entities/repost.entity';
+import { RepostsService } from './services/reposts.services';
 import { NotificationModule } from '../notification/notification.module';
 import { UserDisplayModule } from '../user/user-display.module';
 
 @Module({
-  providers: [LikesService, CommentsService, BookmarksService],
+  providers: [LikesService, CommentsService, BookmarksService, RepostsService],
   controllers: [EngagementsController],
   imports: [
-    TypeOrmModule.forFeature([Like, Comment, Bookmark]),
+    TypeOrmModule.forFeature([Like, Comment, Bookmark, Repost]),
     NotificationModule,
     UserDisplayModule,
   ],

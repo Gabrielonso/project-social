@@ -11,6 +11,12 @@ export const NotificationTemplates = {
       ? `${args.likerUsername} liked your post`
       : 'Someone liked your post',
   }),
+  postReposted: (args: { reposterUsername?: string }) => ({
+    title: 'New repost',
+    body: args.reposterUsername
+      ? `${args.reposterUsername} reposted your post`
+      : 'Someone reposted your post',
+  }),
   postCommented: (args: { commenterUsername?: string }) => ({
     title: 'New comment',
     body: args.commenterUsername

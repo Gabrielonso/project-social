@@ -12,9 +12,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PostService } from './post.service';
+import { PostAnalyticsService } from './post-analytics.service';
 import { CreatePostDto } from './dtos/create-post.dto';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { JwtOptionalGuard } from 'src/common/guards/jwt-optional.guard';
 import { PostFilterDto } from './dtos/posts-filter.dto';
 import { UpdatePostDto } from './dtos/update-post.dto';
 
@@ -22,7 +30,10 @@ import { UpdatePostDto } from './dtos/update-post.dto';
 @ApiBearerAuth()
 @Controller('posts')
 export class PostController {
-  constructor(private readonly postService: PostService) {}
+  constructor(
+    private readonly postService: PostService,
+    private readonly postAnalyticsService: PostAnalyticsService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('')
@@ -63,5 +74,39 @@ export class PostController {
   deleteUser(@Param('postId', new ParseUUIDPipe()) postId: string, @Req() req) {
     const userId: string = req.user.id;
     return this.postService.deletePost(postId, userId);
+  }
+
+  @UseGuards(JwtOptionalGuard)
+  @Post(':postId/view')
+  @ApiOperation({ summary: 'Record a view (impression) for a post' })
+  @ApiParam({
+    description: 'Post ID',
+    example: 'fd9391ab-9f91-45ef-87a6-df076bb19d0c',
+    name: 'postId',
+  })
+  async recordView(
+    @Param('postId', new ParseUUIDPipe()) postId: string,
+    @Req() req,
+  ) {
+    const viewerId: string | undefined = req?.user?.id;
+    return this.postAnalyticsService.recordView(postId, viewerId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':postId/analytics')
+  @ApiOperation({
+    summary: 'Get analytics for your post (owner only)',
+  })
+  @ApiParam({
+    description: 'Post ID',
+    example: 'fd9391ab-9f91-45ef-87a6-df076bb19d0c',
+    name: 'postId',
+  })
+  async getAnalytics(
+    @Param('postId', new ParseUUIDPipe()) postId: string,
+    @Req() req,
+  ) {
+    const userId: string = req.user.id;
+    return this.postAnalyticsService.getAnalytics(postId, userId);
   }
 }

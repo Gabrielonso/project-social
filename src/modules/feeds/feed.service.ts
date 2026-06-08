@@ -11,6 +11,7 @@ import {
   FollowPairRow,
   LikeBookmarkRow,
   RawFeedRow,
+  RepostRow,
   TagDto,
   TagRow,
 } from './types/feed.types';
@@ -130,9 +131,13 @@ export class FeedService {
     limit: number,
     total: number,
   ) {
-    const postIds = rows
-      .filter((r) => r.type === FeedType.POST)
-      .map((r) => r.id);
+    const postIds = [
+      ...new Set(
+        rows
+          .filter((r) => r.type === FeedType.POST || r.type === 'repost')
+          .map((r) => r.id),
+      ),
+    ];
 
     const adIds = rows.filter((r) => r.type === FeedType.AD).map((r) => r.id);
 
@@ -365,11 +370,26 @@ export class FeedService {
         )
       : [];
 
+    const reposts: RepostRow[] =
+      viewerId && postIds.length
+        ? await this.dataSource.query(
+            `
+        SELECT post_id
+        FROM reposts
+        WHERE user_id = $1
+          AND post_id = ANY($2)
+        `,
+            [viewerId, postIds],
+          )
+        : [];
+
     const likedSet = new Set(likes.map((l) => `${l.entity}:${l.entity_id}`));
 
     const bookmarkedSet = new Set(
       bookmarks.map((l) => `${l.entity}:${l.entity_id}`),
     );
+
+    const repostedSet = new Set(reposts.map((r) => r.post_id));
 
     // 3) Follow flags: compute in one query per page
     const ownerIds = viewerId
@@ -407,9 +427,15 @@ export class FeedService {
       }
     }
 
-    const displayMap = await this.userDisplayService.getByIds(
-      this.collectFeedUserIds(posts, ads),
-    );
+    const reposterIds = rows
+      .filter((r) => r.type === 'repost')
+      .map((r) => r.repostedById)
+      .filter((id): id is string => !!id);
+
+    const displayMap = await this.userDisplayService.getByIds([
+      ...this.collectFeedUserIds(posts, ads),
+      ...reposterIds,
+    ]);
 
     // Map for fast lookup
     const postMap = new Map(
@@ -419,6 +445,7 @@ export class FeedService {
           ...this.enrichFeedEntity(p, displayMap),
           viewerHasLiked: likedSet.has(`${FeedType.POST}:${p.id}`),
           viewerHasBookmarked: bookmarkedSet.has(`${FeedType.POST}:${p.id}`),
+          viewerHasReposted: viewerId ? repostedSet.has(p.id) : false,
           viewerFollowsOwner: viewerId
             ? viewerFollows.has(p.ownerId || '')
             : false,
@@ -435,6 +462,7 @@ export class FeedService {
           ...this.enrichFeedEntity(a, displayMap),
           viewerHasLiked: likedSet.has(`${FeedType.AD}:${a.id}`),
           viewerHasBookmarked: bookmarkedSet.has(`${FeedType.AD}:${a.id}`),
+          viewerHasReposted: false,
           viewerFollowsOwner: viewerId
             ? viewerFollows.has(a.ownerId || '')
             : false,
@@ -447,6 +475,15 @@ export class FeedService {
 
     // Rebuild ordered feed
     const feed = rows.map((row) => {
+      if (row.type === 'repost') {
+        return {
+          type: 'repost',
+          repostedBy: resolveUserDisplay(displayMap, row.repostedById),
+          repostedAt: row.createdAt,
+          data: postMap.get(row.id),
+        };
+      }
+
       if (row.type === FeedType.POST) {
         return {
           type: 'post',
@@ -568,7 +605,8 @@ export class FeedService {
         SELECT
           p.id,
           'post' AS type,
-          p.created_at AS "createdAt"
+          p.created_at AS "createdAt",
+          NULL AS "repostedById"
         FROM posts p WHERE p.owner_id = $3
       )
       UNION ALL
@@ -576,8 +614,18 @@ export class FeedService {
         SELECT
           a.id,
           'ad' AS type,
-          a.created_at AS "createdAt"
+          a.created_at AS "createdAt",
+          NULL AS "repostedById"
         FROM ads a WHERE a.owner_id = $3
+      )
+      UNION ALL
+      (
+        SELECT
+          r.post_id AS id,
+          'repost' AS type,
+          r.created_at AS "createdAt",
+          r.user_id AS "repostedById"
+        FROM reposts r WHERE r.user_id = $3
       )
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
@@ -590,6 +638,8 @@ export class FeedService {
   SELECT id FROM posts WHERE owner_id = $1
   UNION ALL
   SELECT id FROM ads WHERE owner_id = $1
+  UNION ALL
+  SELECT post_id AS id FROM reposts WHERE user_id = $1
 ) t`,
       [userId],
     );
@@ -674,7 +724,8 @@ export class FeedService {
         SELECT
           p.id,
           'post' AS type,
-          p.created_at AS "createdAt"
+          p.created_at AS "createdAt",
+          NULL AS "repostedById"
         FROM posts p
         WHERE p.owner_id = $3
           AND ($4::boolean = true OR p.is_public = true)
@@ -684,8 +735,24 @@ export class FeedService {
         SELECT
           a.id,
           'ad' AS type,
-          a.created_at AS "createdAt"
+          a.created_at AS "createdAt",
+          NULL AS "repostedById"
         FROM ads a WHERE a.owner_id = $3
+      )
+      UNION ALL
+      (
+        SELECT
+          r.post_id AS id,
+          'repost' AS type,
+          r.created_at AS "createdAt",
+          r.user_id AS "repostedById"
+        FROM reposts r
+        WHERE r.user_id = $3
+          AND EXISTS (
+            SELECT 1 FROM posts p2
+            WHERE p2.id = r.post_id
+              AND ($4::boolean = true OR p2.is_public = true)
+          )
       )
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
@@ -697,6 +764,14 @@ export class FeedService {
   SELECT id FROM posts WHERE owner_id = $1 AND ($2::boolean = true OR is_public = true)
   UNION ALL
   SELECT id FROM ads WHERE owner_id = $1
+  UNION ALL
+  SELECT r.post_id AS id FROM reposts r
+  WHERE r.user_id = $1
+    AND EXISTS (
+      SELECT 1 FROM posts p2
+      WHERE p2.id = r.post_id
+        AND ($2::boolean = true OR p2.is_public = true)
+    )
 ) t`,
       [userId, canViewAllPosts],
     );

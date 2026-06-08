@@ -73,6 +73,10 @@ export class NotificationDispatcher {
         return NotificationTemplates.followed({ followerUsername: username });
       case NotificationEventType.POST_LIKED:
         return NotificationTemplates.postLiked({ likerUsername: username });
+      case NotificationEventType.POST_REPOSTED:
+        return NotificationTemplates.postReposted({
+          reposterUsername: username,
+        });
       case NotificationEventType.POST_COMMENTED:
         return NotificationTemplates.postCommented({
           commenterUsername: username,

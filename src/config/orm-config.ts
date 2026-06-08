@@ -3,11 +3,13 @@ import * as dotenv from 'dotenv';
 
 import { User } from '../modules/user/entity/user.entity';
 import { Post } from 'src/modules/posts/entities/post.entity';
+import { PostView } from 'src/modules/posts/entities/post-view.entity';
 import { Media } from 'src/modules/media/entities/media.entity';
 import { PostMedia } from 'src/modules/posts/entities/post-media.entity';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { AdMedia } from 'src/modules/ads/entities/ads-media.entity';
 import { Like } from 'src/modules/engagements/entities/like.entity';
+import { Repost } from 'src/modules/engagements/entities/repost.entity';
 import { Share } from 'src/modules/engagements/entities/share.entity';
 import { Comment } from 'src/modules/engagements/entities/comment.entity';
 import { Bookmark } from 'src/modules/engagements/entities/bookmark.entity';
@@ -45,11 +47,13 @@ export const ormConfig: DataSourceOptions = {
   entities: [
     User,
     Post,
+    PostView,
     Media,
     PostMedia,
     Ad,
     AdMedia,
     Like,
+    Repost,
     Share,
     Comment,
     Bookmark,

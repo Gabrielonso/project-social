@@ -39,6 +39,12 @@ export class Post {
   @Column({ name: 'bookmark_count', default: 0 })
   bookmarkCount: number;
 
+  @Column({ name: 'repost_count', default: 0 })
+  repostCount: number;
+
+  @Column({ name: 'view_count', default: 0 })
+  viewCount: number;
+
   @Column({ name: 'allow_comments', default: true })
   allowComments: boolean;
 

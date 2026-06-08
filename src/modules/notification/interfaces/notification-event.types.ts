@@ -4,6 +4,7 @@ import { TagType } from 'src/modules/engagements/enums/tag-type.enum';
 export enum NotificationEventType {
   FOLLOW = 'follow',
   POST_LIKED = 'post_liked',
+  POST_REPOSTED = 'post_reposted',
   POST_COMMENTED = 'post_commented',
   COMMENT_REPLY = 'comment_reply',
   POST_TAG = 'post_tag',

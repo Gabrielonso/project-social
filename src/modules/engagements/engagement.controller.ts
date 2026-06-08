@@ -26,6 +26,8 @@ import { CommentsQueryDto } from './dtos/comments-query.dto';
 import { ReplyCommentDto } from './dtos/reply-comment.dto';
 import { BookmarksService } from './services/bookmarks.services';
 import { ToggleBookmarkDto } from './dtos/toggle-bookmark.dto';
+import { RepostsService } from './services/reposts.services';
+import { ToggleRepostDto } from './dtos/toggle-repost.dto';
 
 @ApiTags('Engagements')
 @ApiBearerAuth()
@@ -36,6 +38,7 @@ export class EngagementsController {
     private readonly likesService: LikesService,
     private readonly commentsService: CommentsService,
     private readonly bookmarksService: BookmarksService,
+    private readonly repostsService: RepostsService,
   ) {}
 
   @Post('likes')
@@ -55,6 +58,33 @@ export class EngagementsController {
       dto.entity,
       dto.entityId,
       userId,
+    );
+  }
+
+  @Post('reposts')
+  @ApiOperation({ summary: 'Toggle repost for a post' })
+  @ApiBody({ type: ToggleRepostDto })
+  async toggleRepost(@Req() req, @Body() dto: ToggleRepostDto) {
+    const userId: string = req.user.id;
+    return this.repostsService.toggleRepost(dto.postId, userId);
+  }
+
+  @Get('reposts/:postId/reposters')
+  @ApiOperation({ summary: 'Get users who reposted a post' })
+  @ApiParam({
+    description: 'Post ID',
+    example: 'fd9391ab-9f91-45ef-87a6-df076bb19d0c',
+    name: 'postId',
+  })
+  async getReposters(
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.repostsService.getReposters(
+      postId,
+      Number(page) || 1,
+      Number(limit) || 20,
     );
   }
 
