@@ -5,22 +5,21 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entity/user.entity';
 import { FollowsService } from '../engagements/services/follows.services';
 import { Follow } from '../engagements/entities/follow.entity';
-import { FeedService } from '../feeds/feed.service';
-import { Post } from '../posts/entities/post.entity';
-import { Ad } from '../ads/entities/ads.entity';
+import { FeedModule } from '../feeds/feed.module';
 import { AccountActivityModule } from '../account-activity/account-activity.module';
 import { NotificationModule } from '../notification/notification.module';
 import { UserDisplayModule } from './user-display.module';
 
 @Module({
   controllers: [UserController],
-  providers: [UserService, FollowsService, FeedService],
+  providers: [UserService, FollowsService],
   exports: [UserService],
   imports: [
-    TypeOrmModule.forFeature([User, Follow, Post, Ad]),
+    TypeOrmModule.forFeature([User, Follow]),
     AccountActivityModule,
     NotificationModule,
     UserDisplayModule,
+    FeedModule,
   ],
 })
 export class UserModule {}

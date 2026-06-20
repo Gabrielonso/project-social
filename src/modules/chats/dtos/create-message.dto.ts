@@ -18,14 +18,23 @@ export class CreateMessageDto {
   chatId?: string;
 
   @ApiPropertyOptional({
-    description: 'Media files data',
+    description: 'Pre-uploaded attachment media IDs (S3 mediaId flow)',
+    type: [String],
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  attachmentMediaIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Media files data (legacy Cloudinary flow)',
     type: [MediaDto],
   })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => MediaDto)
   @IsOptional()
-  attachments: MediaDto[];
+  attachments?: MediaDto[];
 
   @ApiPropertyOptional({
     description: 'Text message',

@@ -16,13 +16,12 @@ import { StatusFilterDto } from './dtos/status-filter.dto';
 import { StatusViewsFilterDto } from './dtos/status-views-filter.dto';
 import { Follow } from '../engagements/entities/follow.entity';
 import { MediaUploadFolder } from '../media/enums/media-upload-folder.enum';
-import { MediaProvider } from '../media/enums/media-provider.enum';
-import { MediaStatus } from '../media/enums/media-status.enum';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { StatusCleanupService } from './status-cleanup.service';
 import { UserDisplayService } from '../user/user-display.service';
 import { UserDisplayDto } from '../user/types/user-display.types';
 import { resolveUserDisplay } from '../user/helpers/user-display.helper';
+import { MediaAttachValidator } from '../media/media-attach.validator';
 
 export type StatusWithViewMeta = Status & {
   viewedByMe: boolean;
@@ -49,6 +48,7 @@ export class StatusService {
     private readonly dataSource: DataSource,
     private readonly statusCleanup: StatusCleanupService,
     private readonly userDisplayService: UserDisplayService,
+    private readonly mediaAttachValidator: MediaAttachValidator,
   ) {}
 
   private getExpiryDate(hours = 24) {
@@ -96,8 +96,7 @@ export class StatusService {
     const byLatestDesc = (
       a: { ownerId: string; latest: Date | string },
       b: { ownerId: string; latest: Date | string },
-    ) =>
-      new Date(b.latest).getTime() - new Date(a.latest).getTime();
+    ) => new Date(b.latest).getTime() - new Date(a.latest).getTime();
 
     const unseen = ownerRows
       .filter((r) => unseenOwners.has(r.ownerId))
@@ -106,10 +105,7 @@ export class StatusService {
       .filter((r) => !unseenOwners.has(r.ownerId))
       .sort(byLatestDesc);
 
-    return [
-      ...unseen.map((r) => r.ownerId),
-      ...seen.map((r) => r.ownerId),
-    ];
+    return [...unseen.map((r) => r.ownerId), ...seen.map((r) => r.ownerId)];
   }
 
   private async getUnseenOwnerIds(
@@ -174,9 +170,9 @@ export class StatusService {
           const userRepo = entityManager.getRepository(User);
           const statusRepo = entityManager.getRepository(Status);
 
-          if (!dto.content && !dto.media) {
+          if (!dto.content && !dto.media && !dto.mediaId) {
             throw new BadRequestException(
-              'Provide at least one of: content, media',
+              'Provide at least one of: content, media, mediaId',
             );
           }
 
@@ -194,7 +190,17 @@ export class StatusService {
           });
 
           let media: Media | null = null;
-          if (dto.media) {
+          if (dto.mediaId) {
+            const [attached] =
+              await this.mediaAttachValidator.validateMediaIdsForAttach(
+                [dto.mediaId],
+                ownerId,
+                MediaUploadFolder.STATUS,
+              );
+            media = attached;
+            status.media = media;
+            status.type = dto.content ? StatusType.THOUGHT : StatusType.MEDIA;
+          } else if (dto.media) {
             const m = dto.media;
 
             if (
@@ -205,20 +211,21 @@ export class StatusService {
               throw new ForbiddenException('Invalid media ownership or folder');
             }
 
-            const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
-
-            const sound = mediaRepo.create({
+            const created = mediaRepo.create({
               provider: m.provider,
               type: m.type,
               sourceIdOrKey: m.sourceIdOrKey,
               duration: m.duration,
-              status: isCloudinary ? MediaStatus.READY : MediaStatus.PROCESSING,
+              status: this.mediaAttachValidator.resolveLegacyStatus(
+                m.provider,
+                m.type,
+              ),
               originalUrl: m.originalUrl,
               streamUrl: m.streamUrl,
               size: m.size,
             });
 
-            media = await mediaRepo.save(sound);
+            media = await mediaRepo.save(created);
             status.media = media;
             status.type = dto.content ? StatusType.THOUGHT : StatusType.MEDIA;
           }
@@ -391,7 +398,10 @@ export class StatusService {
 
     await this.statusViewRepo.upsert(
       { statusId, viewerId },
-      { conflictPaths: ['statusId', 'viewerId'], skipUpdateIfNoValuesChanged: true },
+      {
+        conflictPaths: ['statusId', 'viewerId'],
+        skipUpdateIfNoValuesChanged: true,
+      },
     );
 
     return successResponse('View recorded', { viewedByMe: true });

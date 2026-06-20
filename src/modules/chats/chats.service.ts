@@ -5,6 +5,7 @@ import {
   Inject,
   Injectable,
   forwardRef,
+  BadRequestException,
 } from '@nestjs/common';
 import { ChatParticipant } from './entities/chat-participant.entity';
 import { Brackets, DataSource, In, Repository } from 'typeorm';
@@ -22,12 +23,11 @@ import { User } from '../user/entity/user.entity';
 import { EditGroupChatDto } from './dtos/edit-group-chat.dto ';
 import { AddChatMembersDto } from './dtos/add-chat-members.dto ';
 import { MediaUploadFolder } from '../media/enums/media-upload-folder.enum';
-import { MediaProvider } from '../media/enums/media-provider.enum';
 import { MessageAttachment } from './entities/message-attachment.entity';
-import { MediaStatus } from '../media/enums/media-status.enum';
 import { Media } from '../media/entities/media.entity';
 import { MessageKind } from './enums/message-kind.enum';
 import { UserDisplayService } from '../user/user-display.service';
+import { MediaAttachValidator } from '../media/media-attach.validator';
 
 @Injectable()
 export class ChatsService {
@@ -44,6 +44,7 @@ export class ChatsService {
     @InjectRepository(Chat)
     private chatRepo: Repository<Chat>,
     private readonly userDisplayService: UserDisplayService,
+    private readonly mediaAttachValidator: MediaAttachValidator,
   ) {}
 
   generateChatKey(user1: string, user2: string) {
@@ -125,13 +126,27 @@ export class ChatsService {
             { id: data.chatId },
             {
               lastMessageId: message.id,
-              lastMessage: message,
             },
           );
           let attachments: MessageAttachment[] = [];
-          if (data.attachments) {
-            const messageAttachmentEntities = data?.attachments?.map((m) => {
-              // 🔐 ownership validation
+          if (data.attachmentMediaIds?.length) {
+            const mediaList =
+              await this.mediaAttachValidator.validateMediaIdsForAttach(
+                data.attachmentMediaIds,
+                data.userId,
+                MediaUploadFolder.MESSAGES,
+              );
+            const messageAttachments = mediaList.map((attachment, index) =>
+              messageAttachmentRepo.create({
+                position: index,
+                message,
+                attachment,
+                messageId: message.id,
+              }),
+            );
+            attachments = await messageAttachmentRepo.save(messageAttachments);
+          } else if (data.attachments?.length) {
+            const created = data.attachments.map((m) => {
               if (
                 !m.sourceIdOrKey.startsWith(
                   `${MediaUploadFolder.MESSAGES}/${data.userId}/`,
@@ -142,37 +157,32 @@ export class ChatsService {
                 );
               }
 
-              const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
-
               return mediaRepo.create({
-                //post: post.id,
                 provider: m.provider,
                 type: m.type,
                 sourceIdOrKey: m.sourceIdOrKey,
                 width: m.width,
                 height: m.height,
                 duration: m.duration,
-                status: isCloudinary
-                  ? MediaStatus.READY
-                  : MediaStatus.PROCESSING,
+                status: this.mediaAttachValidator.resolveLegacyStatus(
+                  m.provider,
+                  m.type,
+                ),
                 originalUrl: m.originalUrl,
                 streamUrl: m.streamUrl,
                 size: m.size,
                 fileName: m.fileName,
-                //  position: index,
               });
             });
-
-            const messageAttachments = messageAttachmentEntities?.map(
-              (attachment, index) =>
-                messageAttachmentRepo.create({
-                  position: index,
-                  message,
-                  attachment,
-                  messageId: message.id,
-                }),
+            const savedMedia = await mediaRepo.save(created);
+            const messageAttachments = savedMedia.map((attachment, index) =>
+              messageAttachmentRepo.create({
+                position: index,
+                message,
+                attachment,
+                messageId: message.id,
+              }),
             );
-
             attachments = await messageAttachmentRepo.save(messageAttachments);
           }
 

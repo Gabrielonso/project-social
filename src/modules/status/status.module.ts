@@ -9,11 +9,13 @@ import { Media } from '../media/entities/media.entity';
 import { User } from '../user/entity/user.entity';
 import { Follow } from '../engagements/entities/follow.entity';
 import { UserDisplayModule } from '../user/user-display.module';
+import { MediaModule } from '../media/media.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Status, StatusView, Media, User, Follow]),
     UserDisplayModule,
+    MediaModule,
   ],
   controllers: [StatusController],
   providers: [StatusService, StatusCleanupService],

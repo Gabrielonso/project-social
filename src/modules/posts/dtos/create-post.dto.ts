@@ -11,6 +11,7 @@ import {
   Matches,
   Length,
   IsBoolean,
+  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -114,14 +115,24 @@ export class CreatePostDto {
   @Type(() => SoundMediaDto)
   sound?: SoundMediaDto;
 
-  @ApiProperty({
-    description: 'Media files data',
+  @ApiPropertyOptional({
+    description: 'Pre-uploaded media IDs (S3 mediaId flow)',
+    type: [String],
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  mediaIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Media files data (legacy Cloudinary flow)',
     type: [MediaDto],
   })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => MediaDto)
-  media: MediaDto[];
+  @IsOptional()
+  media?: MediaDto[];
 
   @ApiPropertyOptional({
     description: 'Allow Comments for this post',

@@ -6,11 +6,12 @@ import { Post } from 'src/modules/posts/entities/post.entity';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { FeedCacheInvalidationService } from './feed-cache-invalidation.service';
 import { UserDisplayModule } from '../user/user-display.module';
+import { MediaModule } from '../media/media.module';
 
 @Module({
   providers: [FeedService, FeedCacheInvalidationService],
   controllers: [FeedController],
-  imports: [TypeOrmModule.forFeature([Post, Ad]), UserDisplayModule],
+  imports: [TypeOrmModule.forFeature([Post, Ad]), UserDisplayModule, MediaModule],
   exports: [FeedService, FeedCacheInvalidationService],
 })
 export class FeedModule {}

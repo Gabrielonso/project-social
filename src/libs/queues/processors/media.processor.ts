@@ -1,6 +1,6 @@
 import { OnQueueEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import * as ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from '@ffmpeg-installer/ffmpeg';
+import * as ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import * as sharp from 'sharp';
 import * as AWS from 'aws-sdk';
 import { MediaService } from 'src/modules/media/media.service';
@@ -12,7 +12,7 @@ const s3 = new AWS.S3({
   secretAccessKey: process.env.AWS_SECRET_KEY,
 });
 
-ffmpeg.setFfmpegPath(ffmpegPath.path);
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 @Processor('media')
 export class MediaProcessor extends WorkerHost {
