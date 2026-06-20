@@ -4,6 +4,7 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CreateAdDto } from './dtos/create-ad.dto';
@@ -19,6 +20,7 @@ import { User } from '../user/entity/user.entity';
 import { normalizeHashtags } from 'src/common/utils/hashtags.util';
 import { UpdateAdDto } from './dtos/update-ad.dto';
 import { FeedCacheInvalidationService } from '../feeds/feed-cache-invalidation.service';
+import { MediaAttachValidator } from '../media/media-attach.validator';
 
 @Injectable()
 export class AdService {
@@ -27,6 +29,7 @@ export class AdService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly feedCacheInvalidation: FeedCacheInvalidationService,
+    private readonly mediaAttachValidator: MediaAttachValidator,
   ) {}
 
   private async safeInvalidateFeedCaches(
@@ -82,14 +85,15 @@ export class AdService {
               );
             }
 
-            const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
-
             const sound = mediaRepo.create({
               provider: m.provider,
               type: m.type,
               sourceIdOrKey: m.sourceIdOrKey,
               duration: m.duration,
-              status: isCloudinary ? MediaStatus.READY : MediaStatus.PROCESSING,
+              status: this.mediaAttachValidator.resolveLegacyStatus(
+                m.provider,
+                m.type,
+              ),
               originalUrl: m.originalUrl,
               streamUrl: m.streamUrl,
               size: m.size,
@@ -112,32 +116,42 @@ export class AdService {
           });
           const savedAd = await adRepo.save(ad);
 
-          const mediaEntities = dto.media.map((m) => {
-            // 🔐 ownership validation
-            if (
-              !m.sourceIdOrKey.startsWith(`${MediaUploadFolder.ADS}/${userId}/`)
-            ) {
-              throw new ForbiddenException('Invalid media ownership or folder');
-            }
+          let mediaEntities: Media[] = [];
+          if (dto.mediaIds?.length) {
+            mediaEntities =
+              await this.mediaAttachValidator.validateMediaIdsForAttach(
+                dto.mediaIds,
+                userId,
+                MediaUploadFolder.ADS,
+              );
+          } else if (dto.media?.length) {
+            const created = dto.media.map((m) => {
+              if (
+                !m.sourceIdOrKey.startsWith(`${MediaUploadFolder.ADS}/${userId}/`)
+              ) {
+                throw new ForbiddenException('Invalid media ownership or folder');
+              }
 
-            const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
-
-            return mediaRepo.create({
-              //post: post.id,
-              provider: m.provider,
-              type: m.type,
-              sourceIdOrKey: m.sourceIdOrKey,
-              width: m.width,
-              height: m.height,
-              duration: m.duration,
-              status: isCloudinary ? MediaStatus.READY : MediaStatus.PROCESSING,
-              originalUrl: m.originalUrl,
-              streamUrl: m.streamUrl,
-              size: m.size,
-
-              //  position: index,
+              return mediaRepo.create({
+                provider: m.provider,
+                type: m.type,
+                sourceIdOrKey: m.sourceIdOrKey,
+                width: m.width,
+                height: m.height,
+                duration: m.duration,
+                status: this.mediaAttachValidator.resolveLegacyStatus(
+                  m.provider,
+                  m.type,
+                ),
+                originalUrl: m.originalUrl,
+                streamUrl: m.streamUrl,
+                size: m.size,
+              });
             });
-          });
+            mediaEntities = await mediaRepo.save(created);
+          } else {
+            throw new BadRequestException('Provide mediaIds or media');
+          }
 
           const adMedias = mediaEntities.map((media, index) =>
             adMediaRepo.create({

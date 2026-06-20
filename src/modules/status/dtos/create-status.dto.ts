@@ -5,6 +5,7 @@ import {
   IsString,
   MaxLength,
   ValidateNested,
+  IsUUID,
 } from 'class-validator';
 import { MediaDto } from 'src/modules/media/dtos/media.dto';
 
@@ -19,7 +20,15 @@ export class CreateStatusDto {
   content?: string;
 
   @ApiPropertyOptional({
-    description: 'Status media.',
+    description: 'Pre-uploaded media ID (S3 mediaId flow)',
+    example: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  mediaId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Status media (legacy Cloudinary flow).',
     type: MediaDto,
   })
   @IsOptional()

@@ -20,6 +20,7 @@ import { PresenceService } from 'src/realtime/services/presence.service';
 import { UserDisplayService } from '../user/user-display.service';
 import { UserDisplayModule } from '../user/user-display.module';
 import { NotificationModule } from '../notification/notification.module';
+import { MediaModule } from '../media/media.module';
 
 @Module({
   providers: [
@@ -44,6 +45,7 @@ import { NotificationModule } from '../notification/notification.module';
     forwardRef(() => RealtimeModule),
     NotificationModule,
     UserDisplayModule,
+    MediaModule,
   ],
   controllers: [ChatController],
   exports: [ChatsService],

@@ -57,7 +57,11 @@ export class ChatMessageListener {
         throw new Error('ChatId could not be resolved');
       }
 
-      if (payload.attachments) {
+      if (payload.attachmentMediaIds?.length) {
+        if (!payload.userId) {
+          throw new Error('userId is required for attachment media IDs');
+        }
+      } else if (payload.attachments) {
         if (!payload.attachments.length || payload.attachments.length == 0)
           throw new Error('No content in attachments');
 

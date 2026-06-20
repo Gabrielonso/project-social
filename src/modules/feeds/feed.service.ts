@@ -32,6 +32,9 @@ import {
   stripLegacyOwnerFields,
 } from '../user/helpers/user-display.helper';
 import { UserDisplay } from '../user/types/user-display.types';
+import { MediaUrlResolver } from 'src/common/media/media-url.resolver';
+import { Media } from 'src/modules/media/entities/media.entity';
+import { PostMedia } from '../posts/entities/post-media.entity';
 
 @Injectable()
 export class FeedService {
@@ -46,6 +49,7 @@ export class FeedService {
     private adRepo: Repository<Ad>,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     private readonly userDisplayService: UserDisplayService,
+    private readonly mediaUrlResolver: MediaUrlResolver,
   ) {}
 
   private encodeCursor(input: { createdAt: string; id: string }) {
@@ -102,10 +106,38 @@ export class FeedService {
       };
     });
 
+    const withMedia = this.enrichFeedMedia(base as T);
+
     return {
-      ...base,
+      ...withMedia,
       owner: resolveUserDisplay(displayMap, entity.ownerId as string | undefined),
       tags,
+    };
+  }
+
+  private enrichFeedMedia<T extends CachedBaseEntity>(entity: T): T {
+    const medias = (entity as { medias?: PostMedia[] }).medias;
+    const sound = (entity as { sound?: Media }).sound;
+
+    const enrichedMedias = medias
+      ?.filter(
+        (item) =>
+          item.media && this.mediaUrlResolver.isPubliclyVisible(item.media),
+      )
+      .map((item) => ({
+        ...item,
+        media: this.mediaUrlResolver.toPlaybackPayload(item.media),
+      }));
+
+    const enrichedSound =
+      sound && this.mediaUrlResolver.isPubliclyVisible(sound)
+        ? this.mediaUrlResolver.toPlaybackPayload(sound)
+        : null;
+
+    return {
+      ...entity,
+      ...(enrichedMedias ? { medias: enrichedMedias } : {}),
+      ...(sound !== undefined ? { sound: enrichedSound } : {}),
     };
   }
 

@@ -9,6 +9,8 @@ import {
 import { MediaType } from '../enums/media-type.enum';
 import { MediaProvider } from '../enums/media-provider.enum';
 import { MediaStatus } from '../enums/media-status.enum';
+import { MediaUploadFolder } from '../enums/media-upload-folder.enum';
+import { ModerationStatus } from '../enums/moderation-status.enum';
 
 @Entity('medias')
 export class Media {
@@ -23,7 +25,22 @@ export class Media {
 
   @Index()
   @Column({ name: 'source_id_or_key' })
-  sourceIdOrKey: string; // S3 object key
+  sourceIdOrKey: string;
+
+  @Index()
+  @Column({ name: 'owner_id', type: 'uuid', nullable: true })
+  ownerId?: string;
+
+  @Column({
+    name: 'upload_folder',
+    type: 'enum',
+    enum: MediaUploadFolder,
+    nullable: true,
+  })
+  uploadFolder?: MediaUploadFolder;
+
+  @Column({ name: 'mime_type', nullable: true })
+  mimeType?: string;
 
   @Column({
     type: 'enum',
@@ -32,14 +49,34 @@ export class Media {
   })
   status: MediaStatus;
 
+  @Column({
+    name: 'moderation_status',
+    type: 'enum',
+    enum: ModerationStatus,
+    nullable: true,
+  })
+  moderationStatus?: ModerationStatus;
+
+  @Column({ name: 'moderation_labels', type: 'jsonb', nullable: true })
+  moderationLabels?: Record<string, any>;
+
+  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
+  rejectionReason?: string;
+
+  @Column({ name: 'moderated_at', type: 'timestamp', nullable: true })
+  moderatedAt?: Date;
+
+  @Column({ type: 'jsonb', nullable: true })
+  variants?: Record<string, string>;
+
   @Column({ name: 'original_url', nullable: true })
-  originalUrl: string; // Original uploaded file
+  originalUrl: string;
 
   @Column({ name: 'thumbnail_url', nullable: true })
-  thumbnailUrl: string; // For images/videos
+  thumbnailUrl: string;
 
   @Column({ name: 'low_url', nullable: true })
-  lowUrl: string; // Optimized version
+  lowUrl: string;
 
   @Column({ name: 'stream_url', nullable: true })
   streamUrl: string;
@@ -94,17 +131,10 @@ export class Media {
     },
     nullable: true,
   })
-  size: number; // File size in bytes
+  size: number;
 
   @Column({ name: 'file_name', nullable: true })
   fileName?: string;
-
-  //   @Index()
-  //   @ManyToOne(() => User, (user) => user.media, {
-  //     onDelete: 'SET NULL',
-  //     nullable: true,
-  //   })
-  //   uploadedBy: User;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

@@ -13,7 +13,6 @@ import { Post } from './entities/post.entity';
 import { Media } from 'src/modules/media/entities/media.entity';
 import { MediaProvider } from 'src/modules/media/enums/media-provider.enum';
 import { PostMedia } from './entities/post-media.entity';
-import { MediaStatus } from 'src/modules/media/enums/media-status.enum';
 import { MediaType } from 'src/modules/media/enums/media-type.enum';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MediaUploadFolder } from 'src/modules/media/enums/media-upload-folder.enum';
@@ -28,6 +27,7 @@ import { AccountActivityService } from '../account-activity/account-activity.ser
 import { NotificationDispatcher } from '../notification/notification.dispatcher';
 import { TagDto } from '../engagements/dtos/tag.dto';
 import { FeedCacheInvalidationService } from '../feeds/feed-cache-invalidation.service';
+import { MediaAttachValidator } from '../media/media-attach.validator';
 
 @Injectable()
 export class PostService {
@@ -42,6 +42,7 @@ export class PostService {
     private readonly accountActivityService: AccountActivityService,
     private readonly notificationDispatcher: NotificationDispatcher,
     private readonly feedCacheInvalidation: FeedCacheInvalidationService,
+    private readonly mediaAttachValidator: MediaAttachValidator,
   ) {}
 
   private async notifyPostTags(
@@ -133,7 +134,10 @@ export class PostService {
               type: m.type,
               sourceIdOrKey: m.sourceIdOrKey,
               duration: m.duration,
-              status: isCloudinary ? MediaStatus.READY : MediaStatus.PROCESSING,
+              status: this.mediaAttachValidator.resolveLegacyStatus(
+                m.provider,
+                m.type,
+              ),
               originalUrl: m.originalUrl,
               streamUrl: m.streamUrl,
               size: m.size,
@@ -153,34 +157,46 @@ export class PostService {
           });
           const savedPost = await postRepo.save(post);
 
-          const mediaEntities = dto.media.map((m) => {
-            // 🔐 ownership validation
-            if (
-              !m.sourceIdOrKey.startsWith(
-                `${MediaUploadFolder.POSTS}/${userId}/`,
-              )
-            ) {
-              throw new ForbiddenException('Invalid media ownership or folder');
-            }
+          let mediaEntities: Media[] = [];
+          if (dto.mediaIds?.length) {
+            mediaEntities =
+              await this.mediaAttachValidator.validateMediaIdsForAttach(
+                dto.mediaIds,
+                userId,
+                MediaUploadFolder.POSTS,
+              );
+          } else if (dto.media?.length) {
+            const created = dto.media.map((m) => {
+              if (
+                !m.sourceIdOrKey.startsWith(
+                  `${MediaUploadFolder.POSTS}/${userId}/`,
+                )
+              ) {
+                throw new ForbiddenException(
+                  'Invalid media ownership or folder',
+                );
+              }
 
-            const isCloudinary = m.provider === MediaProvider.CLOUDINARY;
-
-            return mediaRepo.create({
-              //post: post.id,
-              provider: m.provider,
-              type: m.type,
-              sourceIdOrKey: m.sourceIdOrKey,
-              width: m.width,
-              height: m.height,
-              duration: m.duration,
-              status: isCloudinary ? MediaStatus.READY : MediaStatus.PROCESSING,
-              originalUrl: m.originalUrl,
-              streamUrl: m.streamUrl,
-              size: m.size,
-
-              //  position: index,
+              return mediaRepo.create({
+                provider: m.provider,
+                type: m.type,
+                sourceIdOrKey: m.sourceIdOrKey,
+                width: m.width,
+                height: m.height,
+                duration: m.duration,
+                status: this.mediaAttachValidator.resolveLegacyStatus(
+                  m.provider,
+                  m.type,
+                ),
+                originalUrl: m.originalUrl,
+                streamUrl: m.streamUrl,
+                size: m.size,
+              });
             });
-          });
+            mediaEntities = await mediaRepo.save(created);
+          } else {
+            throw new BadRequestException('Provide mediaIds or media');
+          }
 
           const postMedias = mediaEntities.map((media, index) =>
             postMediaRepo.create({
@@ -216,7 +232,12 @@ export class PostService {
 
             await tagRepo.save(tagEntities);
 
-            await this.notifyPostTags(userId, user.username, savedPost.id, dto.tags);
+            await this.notifyPostTags(
+              userId,
+              user.username,
+              savedPost.id,
+              dto.tags,
+            );
           }
 
           // enqueue processing ONLY for S3 videos
@@ -225,9 +246,7 @@ export class PostService {
               (m) =>
                 m.provider === MediaProvider.S3 && m.type === MediaType.VIDEO,
             )
-            .forEach(() => {
-              // this.mediaQueue.add('process', { mediaId: m.id });
-            });
+            .forEach(() => undefined);
 
           // this.eventBus.publish(
           //   new PostCreatedEvent(post.id, userId),
@@ -305,9 +324,7 @@ export class PostService {
             where: { entity: FeedType.POST, entityId: postId },
             select: ['userId'],
           });
-          const existingUserIds = new Set(
-            existingTags.map((t) => t.userId),
-          );
+          const existingUserIds = new Set(existingTags.map((t) => t.userId));
 
           const newTags = (dto.tags || []).filter(
             (t) => t.userId && !existingUserIds.has(t.userId),
@@ -325,12 +342,7 @@ export class PostService {
             }),
           );
           await tagRepo.save(tagEntities);
-          await this.notifyPostTags(
-            userId,
-            user.username,
-            postId,
-            newTags,
-          );
+          await this.notifyPostTags(userId, user.username, postId, newTags);
         });
       }
 

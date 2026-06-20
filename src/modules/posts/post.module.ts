@@ -9,6 +9,7 @@ import { Ad } from '../ads/entities/ads.entity';
 import { AccountActivityModule } from '../account-activity/account-activity.module';
 import { NotificationModule } from '../notification/notification.module';
 import { FeedModule } from '../feeds/feed.module';
+import { MediaModule } from '../media/media.module';
 
 @Module({
   providers: [PostService, PostAnalyticsService],
@@ -18,6 +19,7 @@ import { FeedModule } from '../feeds/feed.module';
     AccountActivityModule,
     NotificationModule,
     FeedModule,
+    MediaModule,
   ],
 })
 export class PostModule {}

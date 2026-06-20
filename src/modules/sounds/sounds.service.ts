@@ -1,15 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { FeedService } from '../feeds/feed.service';
 import { SoundFilterDto } from './dtos/sound-filter.dto';
 import { RawFeedRow } from '../feeds/types/feed.types';
+import { Media } from '../media/entities/media.entity';
+import { MediaUrlResolver } from 'src/common/media/media-url.resolver';
+import { MediaStatus } from '../media/enums/media-status.enum';
+
+type SoundUsageRow = {
+  id: string;
+  usageCount: number;
+  lastUsedAt: Date;
+};
 
 @Injectable()
 export class SoundsService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly feedService: FeedService,
+    @InjectRepository(Media)
+    private readonly mediaRepo: Repository<Media>,
+    private readonly mediaUrlResolver: MediaUrlResolver,
   ) {}
 
   async getSounds(filter: SoundFilterDto) {
@@ -19,7 +32,7 @@ export class SoundsService {
 
     const { startDate, endDate } = filter;
 
-    const params: any[] = [];
+    const params: unknown[] = [];
     let idx = 1;
 
     let postDateFilter = '';
@@ -39,7 +52,7 @@ export class SoundsService {
 
     params.push(limit, offset);
 
-    const sounds = await this.dataSource.query(
+    const rows: SoundUsageRow[] = await this.dataSource.query(
       `
       WITH sound_usage AS (
         SELECT p.sound_media_id AS media_id, p.created_at
@@ -52,18 +65,41 @@ export class SoundsService {
       )
       SELECT
         m.id,
-        m.original_url AS "originalUrl",
-        m.stream_url AS "streamUrl",
         COUNT(su.media_id)::int AS "usageCount",
         MAX(su.created_at) AS "lastUsedAt"
       FROM sound_usage su
       JOIN medias m ON m.id = su.media_id
+      WHERE m.status = '${MediaStatus.READY}'
       GROUP BY m.id
       ORDER BY "usageCount" DESC, "lastUsedAt" DESC
       LIMIT $${idx++} OFFSET $${idx}
       `,
       params,
     );
+
+    const mediaIds = rows.map((row) => row.id);
+    const mediaList =
+      mediaIds.length > 0
+        ? await this.mediaRepo.find({ where: { id: In(mediaIds) } })
+        : [];
+    const mediaById = new Map(mediaList.map((media) => [media.id, media]));
+
+    const sounds = rows
+      .map((row) => {
+        const media = mediaById.get(row.id);
+        if (!media || !this.mediaUrlResolver.isPubliclyVisible(media)) {
+          return null;
+        }
+        const playback = this.mediaUrlResolver.resolve(media);
+        return {
+          id: row.id,
+          originalUrl: playback.original,
+          streamUrl: playback.stream,
+          usageCount: row.usageCount,
+          lastUsedAt: row.lastUsedAt,
+        };
+      })
+      .filter((sound): sound is NonNullable<typeof sound> => sound != null);
 
     return successResponse('Operation Successful', {
       data: sounds,
@@ -73,7 +109,6 @@ export class SoundsService {
   }
 
   async getTrendingSounds(filter: SoundFilterDto) {
-    // For now, same as getSounds but can be specialized later.
     return this.getSounds(filter);
   }
 
