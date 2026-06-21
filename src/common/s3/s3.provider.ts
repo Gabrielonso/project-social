@@ -45,6 +45,17 @@ export class S3Provider implements IMediaStorageProvider {
     }
   }
 
+  async getObjectContentLength(key: string): Promise<number | null> {
+    try {
+      const head = await getS3Client()
+        .headObject({ Bucket: getS3Bucket(), Key: key })
+        .promise();
+      return head.ContentLength ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async generateUploadCredentials(
     input: GenerateUploadInput,
   ): Promise<UploadCredentials> {

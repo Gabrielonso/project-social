@@ -1,0 +1,400 @@
+2026-06-21T09:49:31.127073352Z     publicUrl: 'https://bluebeep-s3-bucket.s3.us-east-1.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/lLT80FzK2NCzIA72m_aNe.mp4'
+2026-06-21T09:49:31.127075493Z   }
+2026-06-21T09:49:31.127077593Z } <<==credentials
+2026-06-21T09:49:44.624284893Z [Nest] 83  - 06/21/2026, 9:49:44 AM     LOG [MediaPipelineService] Enqueued moderation for media cade5811-dc14-4227-835a-19af0e949c7a
+2026-06-21T09:49:51.319240945Z [Nest] 83  - 06/21/2026, 9:49:51 AM   ERROR [MediaModerationProcessor] Moderation failed for cade5811-dc14-4227-835a-19af0e949c7a: Failed to decode video.
+2026-06-21T09:50:26.994394453Z [Nest] 83  - 06/21/2026, 9:50:26 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T09:50:26.994425943Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T09:50:26.994433604Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T09:50:26.994440154Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T09:50:26.994446624Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T09:51:27.001372048Z [Nest] 83  - 06/21/2026, 9:51:27 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T09:51:27.001407829Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T09:51:27.001414079Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T09:51:27.001418999Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T09:51:27.00142385Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T09:52:26.996018521Z [Nest] 83  - 06/21/2026, 9:52:26 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T09:52:26.996049802Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T09:52:26.996054272Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T09:52:26.996058372Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T09:52:26.996062232Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T09:53:26.999181836Z [Nest] 83  - 06/21/2026, 9:53:26 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T09:53:26.999221167Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T09:53:26.999239638Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T09:53:26.999242708Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T09:53:26.999246198Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T09:54:27.012529853Z [Nest] 83  - 06/21/2026, 9:54:27 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T09:54:27.012557433Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T09:54:27.012562873Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T09:54:27.012567354Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T09:54:27.012571934Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T09:55:12.913975966Z Client connected: 6TDD_GJnAHpUO0DDAAAP, user: a395fcd0-78d2-4ecf-bc72-4e82f1507116
+2026-06-21T09:55:25.079807478Z Client connected: dfxwj6U65nRlKd0CAAAR, user: a395fcd0-78d2-4ecf-bc72-4e82f1507116
+2026-06-21T09:56:25.479315072Z [Nest] 83  - 06/21/2026, 9:56:25 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T09:56:25.479337383Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T09:56:25.479342113Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T09:56:25.479347253Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T09:56:25.479354953Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T09:57:25.481879668Z [Nest] 83  - 06/21/2026, 9:57:25 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T09:57:25.481912259Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T09:57:25.481918649Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T09:57:25.48192473Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T09:57:25.48192895Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T09:58:25.481333199Z [Nest] 83  - 06/21/2026, 9:58:25 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T09:58:25.48137289Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T09:58:25.481381171Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T09:58:25.481388281Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T09:58:25.481411942Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T09:59:25.48201474Z [Nest] 83  - 06/21/2026, 9:59:25 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T09:59:25.482043561Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T09:59:25.482049741Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T09:59:25.482055891Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T09:59:25.482061361Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T09:59:56.348609667Z Client connected: 6pKcdtj3lcnY78BGAAAT, user: a395fcd0-78d2-4ecf-bc72-4e82f1507116
+2026-06-21T10:00:56.579866396Z [Nest] 83  - 06/21/2026, 10:00:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:00:56.579897627Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:00:56.579902997Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:00:56.579907657Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:00:56.579912297Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:01:56.579381748Z [Nest] 83  - 06/21/2026, 10:01:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:01:56.579412989Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:01:56.579418229Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:01:56.579422999Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:01:56.579427419Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:01:58.286550967Z UserQueryFilterDto { search: undefined, page: 1, limit: 10 }
+2026-06-21T10:02:00.714430796Z {
+2026-06-21T10:02:00.714469507Z   userId: 'a395fcd0-78d2-4ecf-bc72-4e82f1507116',
+2026-06-21T10:02:00.714474287Z   type: 'video',
+2026-06-21T10:02:00.714479327Z   mimeType: 'video/mp4',
+2026-06-21T10:02:00.714483457Z   size: 5417875,
+2026-06-21T10:02:00.714487307Z   uploadFolder: 'posts'
+2026-06-21T10:02:00.714491158Z } <<==input
+2026-06-21T10:02:00.714506908Z posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/qkT3E_yy5_f6WoYcWDm8n.mp4 <<==key
+2026-06-21T10:02:00.716349172Z https://bluebeep-s3-bucket.s3.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/qkT3E_yy5_f6WoYcWDm8n.mp4?Content-Type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T100200Z&X-Amz-Expires=1800&X-Amz-Signature=a9596689568dd09ef6ba03f2b720c4d93e3736377a6bd47cdabf0a8aacc5c3ef&X-Amz-SignedHeaders=host <uurl
+2026-06-21T10:02:00.716445554Z {
+2026-06-21T10:02:00.716469435Z   provider: 's3',
+2026-06-21T10:02:00.716473355Z   data: {
+2026-06-21T10:02:00.716478555Z     uploadUrl: 'https://bluebeep-s3-bucket.s3.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/qkT3E_yy5_f6WoYcWDm8n.mp4?Content-Type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T100200Z&X-Amz-Expires=1800&X-Amz-Signature=a9596689568dd09ef6ba03f2b720c4d93e3736377a6bd47cdabf0a8aacc5c3ef&X-Amz-SignedHeaders=host',
+2026-06-21T10:02:00.716481935Z     key: 'posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/qkT3E_yy5_f6WoYcWDm8n.mp4',
+2026-06-21T10:02:00.716484985Z     expiresIn: 1800,
+2026-06-21T10:02:00.716488725Z     publicUrl: 'https://bluebeep-s3-bucket.s3.us-east-1.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/qkT3E_yy5_f6WoYcWDm8n.mp4'
+2026-06-21T10:02:00.716491826Z   }
+2026-06-21T10:02:00.716494656Z } <<==credentials
+2026-06-21T10:02:14.463080413Z [Nest] 83  - 06/21/2026, 10:02:14 AM     LOG [MediaPipelineService] Enqueued moderation for media acc6893f-1311-44f8-a673-85a9d8fa6b3c
+2026-06-21T10:02:20.423406012Z [Nest] 83  - 06/21/2026, 10:02:20 AM   ERROR [MediaModerationProcessor] Moderation failed for acc6893f-1311-44f8-a673-85a9d8fa6b3c: Failed to decode video.
+2026-06-21T10:02:56.586380399Z [Nest] 83  - 06/21/2026, 10:02:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:02:56.586435601Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:02:56.586442301Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:02:56.586447291Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:02:56.586452051Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:03:56.582128587Z [Nest] 83  - 06/21/2026, 10:03:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:03:56.582162378Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:03:56.582167938Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:03:56.582172728Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:03:56.582177969Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:04:56.586690953Z [Nest] 83  - 06/21/2026, 10:04:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:04:56.586717534Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:04:56.586725094Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:04:56.586731754Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:04:56.586738265Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:05:56.598871103Z [Nest] 83  - 06/21/2026, 10:05:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:05:56.598898284Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:05:56.598905055Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:05:56.598911295Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:05:56.598916615Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:06:04.485860628Z UserQueryFilterDto { search: undefined, page: 1, limit: 8 }
+2026-06-21T10:06:56.61781892Z [Nest] 83  - 06/21/2026, 10:06:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:06:56.617850801Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:06:56.617857511Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:06:56.617863541Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:06:56.617869561Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:07:56.655547757Z [Nest] 83  - 06/21/2026, 10:07:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:07:56.655581478Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:07:56.655589818Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:07:56.655596109Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:07:56.655600759Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:08:56.645587059Z [Nest] 83  - 06/21/2026, 10:08:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:08:56.64562851Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:08:56.645634421Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:08:56.645639201Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:08:56.645644161Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:09:56.654282827Z [Nest] 83  - 06/21/2026, 10:09:56 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:09:56.654311287Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:09:56.654315797Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:09:56.654319738Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:09:56.654344458Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:10:52.306074383Z Client connected: mZ3glBQ_Jvofs_5GAAAV, user: a395fcd0-78d2-4ecf-bc72-4e82f1507116
+2026-06-21T10:11:52.515973875Z [Nest] 83  - 06/21/2026, 10:11:52 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:11:52.516007185Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:11:52.516015466Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:11:52.516020306Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:11:52.516024856Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:12:52.528732751Z [Nest] 83  - 06/21/2026, 10:12:52 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:12:52.528758392Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:12:52.528763922Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:12:52.528768542Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:12:52.528773022Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:13:52.531362425Z [Nest] 83  - 06/21/2026, 10:13:52 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:13:52.531394086Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:13:52.531399556Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:13:52.531404506Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:13:52.531410986Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:14:52.529407451Z [Nest] 83  - 06/21/2026, 10:14:52 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:14:52.529440822Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:14:52.529446652Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:14:52.529452102Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:14:52.529457602Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:15:33.208854225Z UserQueryFilterDto { search: undefined, page: 1, limit: 10 }
+2026-06-21T10:15:34.64193416Z {
+2026-06-21T10:15:34.641958531Z   userId: 'a395fcd0-78d2-4ecf-bc72-4e82f1507116',
+2026-06-21T10:15:34.641979461Z   type: 'image',
+2026-06-21T10:15:34.641983721Z   mimeType: 'image/jpeg',
+2026-06-21T10:15:34.641986851Z   size: 2808983,
+2026-06-21T10:15:34.641990471Z   uploadFolder: 'posts'
+2026-06-21T10:15:34.641993641Z } <<==input
+2026-06-21T10:15:34.641997332Z posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/lv7cY9mzhxmKWDEenX4pN.jpg <<==key
+2026-06-21T10:15:34.646175183Z https://bluebeep-s3-bucket.s3.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/lv7cY9mzhxmKWDEenX4pN.jpg?Content-Type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T101534Z&X-Amz-Expires=1800&X-Amz-Signature=cc3b9245dad2fda119d2bbca1690ea0498af7c8ad663089903d8daffedca0f9e&X-Amz-SignedHeaders=host <uurl
+2026-06-21T10:15:34.646336987Z {
+2026-06-21T10:15:34.646342478Z   provider: 's3',
+2026-06-21T10:15:34.646345848Z   data: {
+2026-06-21T10:15:34.646351538Z     uploadUrl: 'https://bluebeep-s3-bucket.s3.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/lv7cY9mzhxmKWDEenX4pN.jpg?Content-Type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T101534Z&X-Amz-Expires=1800&X-Amz-Signature=cc3b9245dad2fda119d2bbca1690ea0498af7c8ad663089903d8daffedca0f9e&X-Amz-SignedHeaders=host',
+2026-06-21T10:15:34.646365818Z     key: 'posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/lv7cY9mzhxmKWDEenX4pN.jpg',
+2026-06-21T10:15:34.646368588Z     expiresIn: 1800,
+2026-06-21T10:15:34.646371919Z     publicUrl: 'https://bluebeep-s3-bucket.s3.us-east-1.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/lv7cY9mzhxmKWDEenX4pN.jpg'
+2026-06-21T10:15:34.646374839Z   }
+2026-06-21T10:15:34.646377939Z } <<==credentials
+2026-06-21T10:15:42.861722484Z [Nest] 83  - 06/21/2026, 10:15:42 AM     LOG [MediaPipelineService] Enqueued moderation for media 65d8d0f5-f95d-4c0b-a272-20375f932199
+2026-06-21T10:15:43.188214316Z [Nest] 83  - 06/21/2026, 10:15:43 AM   ERROR [MediaModerationProcessor] Moderation failed for 65d8d0f5-f95d-4c0b-a272-20375f932199: Request has invalid image format
+2026-06-21T10:15:44.210554686Z [Nest] 83  - 06/21/2026, 10:15:44 AM   ERROR [AllExceptionsFilter] Exception: Media 65d8d0f5-f95d-4c0b-a272-20375f932199 cannot be attached yet (status: failed), stack: ForbiddenException: Media 65d8d0f5-f95d-4c0b-a272-20375f932199 cannot be attached yet (status: failed)
+2026-06-21T10:15:44.210581426Z     at MediaAttachValidator.validateMediaIds (/opt/render/project/src/dist/modules/media/media-attach.validator.js:81:23)
+2026-06-21T10:15:44.210587807Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:15:44.210648958Z     at async /opt/render/project/src/dist/modules/posts/post.service.js:131:25
+2026-06-21T10:15:44.210655038Z     at async EntityManager.transaction (/opt/render/project/src/node_modules/typeorm/entity-manager/EntityManager.js:75:28)
+2026-06-21T10:15:44.210660078Z     at async PostService.createPost (/opt/render/project/src/dist/modules/posts/post.service.js:87:28)
+2026-06-21T10:15:44.210664229Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+2026-06-21T10:15:44.210668499Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-proxy.js:9:17
+2026-06-21T10:15:50.966417561Z [Nest] 83  - 06/21/2026, 10:15:50 AM   ERROR [AllExceptionsFilter] Exception: Media 65d8d0f5-f95d-4c0b-a272-20375f932199 cannot be attached yet (status: failed), stack: ForbiddenException: Media 65d8d0f5-f95d-4c0b-a272-20375f932199 cannot be attached yet (status: failed)
+2026-06-21T10:15:50.966458712Z     at MediaAttachValidator.validateMediaIds (/opt/render/project/src/dist/modules/media/media-attach.validator.js:81:23)
+2026-06-21T10:15:50.966464012Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:15:50.966468663Z     at async /opt/render/project/src/dist/modules/posts/post.service.js:131:25
+2026-06-21T10:15:50.966471723Z     at async EntityManager.transaction (/opt/render/project/src/node_modules/typeorm/entity-manager/EntityManager.js:75:28)
+2026-06-21T10:15:50.966475563Z     at async PostService.createPost (/opt/render/project/src/dist/modules/posts/post.service.js:87:28)
+2026-06-21T10:15:50.966479143Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+2026-06-21T10:15:50.966482053Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-proxy.js:9:17
+2026-06-21T10:15:52.476270753Z [Nest] 83  - 06/21/2026, 10:15:52 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:15:52.476297904Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:15:52.476302354Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:15:52.476305674Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:15:52.476314165Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:16:10.657614216Z UserQueryFilterDto { search: undefined, page: 1, limit: 10 }
+2026-06-21T10:16:11.596603527Z {
+2026-06-21T10:16:11.596631678Z   userId: 'a395fcd0-78d2-4ecf-bc72-4e82f1507116',
+2026-06-21T10:16:11.596635098Z   type: 'image',
+2026-06-21T10:16:11.596638228Z   mimeType: 'image/jpeg',
+2026-06-21T10:16:11.596640748Z   size: 1955253,
+2026-06-21T10:16:11.596643598Z   uploadFolder: 'posts'
+2026-06-21T10:16:11.596645958Z } <<==input
+2026-06-21T10:16:11.596648798Z posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/RZLhExauwwwwx7awP7dXN.jpg <<==key
+2026-06-21T10:16:11.597892505Z https://bluebeep-s3-bucket.s3.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/RZLhExauwwwwx7awP7dXN.jpg?Content-Type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T101611Z&X-Amz-Expires=1800&X-Amz-Signature=08b99bfa4ca7d4250877c74bc487ee507adc29c075c642d0b7ae62bdcc9b9269&X-Amz-SignedHeaders=host <uurl
+2026-06-21T10:16:11.597987147Z {
+2026-06-21T10:16:11.597992468Z   provider: 's3',
+2026-06-21T10:16:11.597995628Z   data: {
+2026-06-21T10:16:11.598001688Z     uploadUrl: 'https://bluebeep-s3-bucket.s3.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/RZLhExauwwwwx7awP7dXN.jpg?Content-Type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T101611Z&X-Amz-Expires=1800&X-Amz-Signature=08b99bfa4ca7d4250877c74bc487ee507adc29c075c642d0b7ae62bdcc9b9269&X-Amz-SignedHeaders=host',
+2026-06-21T10:16:11.598005888Z     key: 'posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/RZLhExauwwwwx7awP7dXN.jpg',
+2026-06-21T10:16:11.598008978Z     expiresIn: 1800,
+2026-06-21T10:16:11.598012948Z     publicUrl: 'https://bluebeep-s3-bucket.s3.us-east-1.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/RZLhExauwwwwx7awP7dXN.jpg'
+2026-06-21T10:16:11.598015298Z   }
+2026-06-21T10:16:11.598017318Z } <<==credentials
+2026-06-21T10:16:15.799713575Z [Nest] 83  - 06/21/2026, 10:16:15 AM     LOG [MediaPipelineService] Enqueued moderation for media 4c63dac1-ea4c-43df-a639-faf6c6b97b87
+2026-06-21T10:16:16.788950204Z [Nest] 83  - 06/21/2026, 10:16:16 AM   ERROR [MediaModerationProcessor] Moderation failed for 4c63dac1-ea4c-43df-a639-faf6c6b97b87: Request has invalid image format
+2026-06-21T10:16:17.223484181Z [Nest] 83  - 06/21/2026, 10:16:17 AM   ERROR [AllExceptionsFilter] Exception: Media 4c63dac1-ea4c-43df-a639-faf6c6b97b87 cannot be attached yet (status: failed), stack: ForbiddenException: Media 4c63dac1-ea4c-43df-a639-faf6c6b97b87 cannot be attached yet (status: failed)
+2026-06-21T10:16:17.223509351Z     at MediaAttachValidator.validateMediaIds (/opt/render/project/src/dist/modules/media/media-attach.validator.js:81:23)
+2026-06-21T10:16:17.223513392Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:16:17.223516332Z     at async /opt/render/project/src/dist/modules/posts/post.service.js:131:25
+2026-06-21T10:16:17.223518962Z     at async EntityManager.transaction (/opt/render/project/src/node_modules/typeorm/entity-manager/EntityManager.js:75:28)
+2026-06-21T10:16:17.223521862Z     at async PostService.createPost (/opt/render/project/src/dist/modules/posts/post.service.js:87:28)
+2026-06-21T10:16:17.223524252Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+2026-06-21T10:16:17.223526672Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-proxy.js:9:17
+2026-06-21T10:16:21.962596479Z [Nest] 83  - 06/21/2026, 10:16:21 AM   ERROR [AllExceptionsFilter] Exception: Media 4c63dac1-ea4c-43df-a639-faf6c6b97b87 cannot be attached yet (status: failed), stack: ForbiddenException: Media 4c63dac1-ea4c-43df-a639-faf6c6b97b87 cannot be attached yet (status: failed)
+2026-06-21T10:16:21.96262458Z     at MediaAttachValidator.validateMediaIds (/opt/render/project/src/dist/modules/media/media-attach.validator.js:81:23)
+2026-06-21T10:16:21.96262838Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:16:21.96263291Z     at async /opt/render/project/src/dist/modules/posts/post.service.js:131:25
+2026-06-21T10:16:21.9626355Z     at async EntityManager.transaction (/opt/render/project/src/node_modules/typeorm/entity-manager/EntityManager.js:75:28)
+2026-06-21T10:16:21.96263854Z     at async PostService.createPost (/opt/render/project/src/dist/modules/posts/post.service.js:87:28)
+2026-06-21T10:16:21.96264106Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+2026-06-21T10:16:21.96264354Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-proxy.js:9:17
+2026-06-21T10:16:28.098526101Z [Nest] 83  - 06/21/2026, 10:16:28 AM   ERROR [AllExceptionsFilter] Exception: Media 4c63dac1-ea4c-43df-a639-faf6c6b97b87 cannot be attached yet (status: failed), stack: ForbiddenException: Media 4c63dac1-ea4c-43df-a639-faf6c6b97b87 cannot be attached yet (status: failed)
+2026-06-21T10:16:28.098554852Z     at MediaAttachValidator.validateMediaIds (/opt/render/project/src/dist/modules/media/media-attach.validator.js:81:23)
+2026-06-21T10:16:28.098558902Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:16:28.098562102Z     at async /opt/render/project/src/dist/modules/posts/post.service.js:131:25
+2026-06-21T10:16:28.098564572Z     at async EntityManager.transaction (/opt/render/project/src/node_modules/typeorm/entity-manager/EntityManager.js:75:28)
+2026-06-21T10:16:28.098567713Z     at async PostService.createPost (/opt/render/project/src/dist/modules/posts/post.service.js:87:28)
+2026-06-21T10:16:28.098585163Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+2026-06-21T10:16:28.098587773Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-proxy.js:9:17
+2026-06-21T10:16:41.941176959Z UserQueryFilterDto { search: undefined, page: 1, limit: 10 }
+2026-06-21T10:16:43.334158911Z {
+2026-06-21T10:16:43.334197052Z   userId: 'a395fcd0-78d2-4ecf-bc72-4e82f1507116',
+2026-06-21T10:16:43.334204293Z   type: 'video',
+2026-06-21T10:16:43.334211703Z   mimeType: 'video/mp4',
+2026-06-21T10:16:43.334217773Z   size: 5417875,
+2026-06-21T10:16:43.334223573Z   uploadFolder: 'posts'
+2026-06-21T10:16:43.334229863Z } <<==input
+2026-06-21T10:16:43.334236244Z posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/c66TAKemtyugJk7YdbDw7.mp4 <<==key
+2026-06-21T10:16:43.335183911Z https://bluebeep-s3-bucket.s3.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/c66TAKemtyugJk7YdbDw7.mp4?Content-Type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T101643Z&X-Amz-Expires=1800&X-Amz-Signature=1e08037662fd87bb2e248ce7ffb3b2c21c9a62ae92c2f9ec13ab4e15353625cd&X-Amz-SignedHeaders=host <uurl
+2026-06-21T10:16:43.335262723Z {
+2026-06-21T10:16:43.335277744Z   provider: 's3',
+2026-06-21T10:16:43.335282954Z   data: {
+2026-06-21T10:16:43.335290334Z     uploadUrl: 'https://bluebeep-s3-bucket.s3.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/c66TAKemtyugJk7YdbDw7.mp4?Content-Type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T101643Z&X-Amz-Expires=1800&X-Amz-Signature=1e08037662fd87bb2e248ce7ffb3b2c21c9a62ae92c2f9ec13ab4e15353625cd&X-Amz-SignedHeaders=host',
+2026-06-21T10:16:43.335296054Z     key: 'posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/c66TAKemtyugJk7YdbDw7.mp4',
+2026-06-21T10:16:43.335300684Z     expiresIn: 1800,
+2026-06-21T10:16:43.335307095Z     publicUrl: 'https://bluebeep-s3-bucket.s3.us-east-1.amazonaws.com/posts/a395fcd0-78d2-4ecf-bc72-4e82f1507116/c66TAKemtyugJk7YdbDw7.mp4'
+2026-06-21T10:16:43.335311695Z   }
+2026-06-21T10:16:43.335318605Z } <<==credentials
+2026-06-21T10:16:51.258622183Z [Nest] 83  - 06/21/2026, 10:16:51 AM     LOG [MediaPipelineService] Enqueued moderation for media b79ed791-7792-44da-a067-442b4d32c466
+2026-06-21T10:16:52.481498131Z [Nest] 83  - 06/21/2026, 10:16:52 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:16:52.481524151Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:16:52.481529782Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:16:52.481534632Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:16:52.481539502Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:16:57.200054334Z [Nest] 83  - 06/21/2026, 10:16:57 AM   ERROR [MediaModerationProcessor] Moderation failed for b79ed791-7792-44da-a067-442b4d32c466: Failed to decode video.
+2026-06-21T10:17:12.027952828Z Client connected: 2KZ7zr8q9P6sj-fQAAAX, user: a395fcd0-78d2-4ecf-bc72-4e82f1507116
+2026-06-21T10:18:12.259069051Z [Nest] 83  - 06/21/2026, 10:18:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:18:12.259114073Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:18:12.259120613Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:18:12.259123963Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:18:12.259127023Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:19:12.251219862Z [Nest] 83  - 06/21/2026, 10:19:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:19:12.251251893Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:19:12.251256473Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:19:12.251260593Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:19:12.251264283Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:20:12.253614009Z [Nest] 83  - 06/21/2026, 10:20:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:20:12.253660911Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:20:12.253667601Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:20:12.253673871Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:20:12.253679902Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:21:12.253592358Z [Nest] 83  - 06/21/2026, 10:21:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:21:12.253622459Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:21:12.253626899Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:21:12.253631539Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:21:12.253636089Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:22:12.260525858Z [Nest] 83  - 06/21/2026, 10:22:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:22:12.260557649Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:22:12.260562759Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:22:12.260568089Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:22:12.260572859Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:23:12.256846919Z [Nest] 83  - 06/21/2026, 10:23:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:23:12.25688039Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:23:12.25688568Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:23:12.25689065Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:23:12.25689575Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:24:12.260664554Z [Nest] 83  - 06/21/2026, 10:24:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:24:12.260698185Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:24:12.260704836Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:24:12.260710316Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:24:12.260715566Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:25:12.257360973Z [Nest] 83  - 06/21/2026, 10:25:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:25:12.257386884Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:25:12.257392774Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:25:12.257397864Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:25:12.257402624Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:26:12.279065124Z [Nest] 83  - 06/21/2026, 10:26:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:26:12.279101835Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:26:12.279108325Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:26:12.279113186Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:26:12.279118326Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:27:12.281246766Z [Nest] 83  - 06/21/2026, 10:27:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:27:12.281271667Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:27:12.281277537Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:27:12.281283387Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:27:12.281296468Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:28:12.287562376Z [Nest] 83  - 06/21/2026, 10:28:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:28:12.287605617Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:28:12.287611847Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:28:12.287616747Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:28:12.287621717Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:29:12.290063052Z [Nest] 83  - 06/21/2026, 10:29:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:29:12.290091323Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:29:12.290096643Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:29:12.290100523Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:29:12.290104103Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:30:12.291307098Z [Nest] 83  - 06/21/2026, 10:30:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:30:12.291326248Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:30:12.291332188Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:30:12.291337449Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:30:12.291342949Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:31:12.31398768Z [Nest] 83  - 06/21/2026, 10:31:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:31:12.314687731Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:31:12.314694651Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:31:12.314698571Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:31:12.314702521Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:32:12.313322681Z [Nest] 83  - 06/21/2026, 10:32:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:32:12.313341901Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:32:12.313353502Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:32:12.313358322Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:32:12.313363602Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:33:12.33243128Z [Nest] 83  - 06/21/2026, 10:33:12 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:33:12.33246524Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:33:12.332471561Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:33:12.332477471Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:33:12.332483131Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:33:22.509605134Z Client connected: HkHXXSnJorje9ClwAAAZ, user: a395fcd0-78d2-4ecf-bc72-4e82f1507116
+2026-06-21T10:34:22.737036898Z [Nest] 83  - 06/21/2026, 10:34:22 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:34:22.737062649Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:34:22.737067209Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:34:22.737071069Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:34:22.737074719Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:34:53.907507611Z {
+2026-06-21T10:34:53.907530032Z   userId: 'a395fcd0-78d2-4ecf-bc72-4e82f1507116',
+2026-06-21T10:34:53.907533922Z   type: 'video',
+2026-06-21T10:34:53.907538063Z   mimeType: 'video/mp4',
+2026-06-21T10:34:53.907541143Z   size: 5417875,
+2026-06-21T10:34:53.907544173Z   uploadFolder: 'status'
+2026-06-21T10:34:53.907547433Z } <<==input
+2026-06-21T10:34:53.907624035Z status/a395fcd0-78d2-4ecf-bc72-4e82f1507116/iG704ucn4R7H6qW1c6yQj.mp4 <<==key
+2026-06-21T10:34:53.90916647Z https://bluebeep-s3-bucket.s3.amazonaws.com/status/a395fcd0-78d2-4ecf-bc72-4e82f1507116/iG704ucn4R7H6qW1c6yQj.mp4?Content-Type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T103453Z&X-Amz-Expires=1800&X-Amz-Signature=72bc5d6dc83dfbf963b606abedcce8db03b80167c17e1ece099ac529c84387e5&X-Amz-SignedHeaders=host <uurl
+2026-06-21T10:34:53.909334724Z {
+2026-06-21T10:34:53.909344935Z   provider: 's3',
+2026-06-21T10:34:53.909349895Z   data: {
+2026-06-21T10:34:53.909356765Z     uploadUrl: 'https://bluebeep-s3-bucket.s3.amazonaws.com/status/a395fcd0-78d2-4ecf-bc72-4e82f1507116/iG704ucn4R7H6qW1c6yQj.mp4?Content-Type=video%2Fmp4&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVUGRTH2BGSI25DUJ%2F20260621%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260621T103453Z&X-Amz-Expires=1800&X-Amz-Signature=72bc5d6dc83dfbf963b606abedcce8db03b80167c17e1ece099ac529c84387e5&X-Amz-SignedHeaders=host',
+2026-06-21T10:34:53.909362265Z     key: 'status/a395fcd0-78d2-4ecf-bc72-4e82f1507116/iG704ucn4R7H6qW1c6yQj.mp4',
+2026-06-21T10:34:53.909374926Z     expiresIn: 1800,
+2026-06-21T10:34:53.909378506Z     publicUrl: 'https://bluebeep-s3-bucket.s3.us-east-1.amazonaws.com/status/a395fcd0-78d2-4ecf-bc72-4e82f1507116/iG704ucn4R7H6qW1c6yQj.mp4'
+2026-06-21T10:34:53.909382206Z   }
+2026-06-21T10:34:53.909385846Z } <<==credentials
+2026-06-21T10:35:07.342795644Z [Nest] 83  - 06/21/2026, 10:35:07 AM     LOG [MediaPipelineService] Enqueued moderation for media 8578f148-2705-4f9a-8146-9dd7fd696bd6
+2026-06-21T10:35:07.862944339Z [Nest] 83  - 06/21/2026, 10:35:07 AM   ERROR [AllExceptionsFilter] Exception: Provide at least one of: content, media, mediaId, stack: BadRequestException: Provide at least one of: content, media, mediaId
+2026-06-21T10:35:07.86296992Z     at /opt/render/project/src/dist/modules/status/status.service.js:152:27
+2026-06-21T10:35:07.86297593Z     at EntityManager.transaction (/opt/render/project/src/node_modules/typeorm/entity-manager/EntityManager.js:75:34)
+2026-06-21T10:35:07.86298109Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:35:07.86298663Z     at async StatusService.createStatus (/opt/render/project/src/dist/modules/status/status.service.js:146:20)
+2026-06-21T10:35:07.86299154Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+2026-06-21T10:35:07.862996451Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-proxy.js:9:17
+2026-06-21T10:35:13.243693889Z [Nest] 83  - 06/21/2026, 10:35:13 AM   ERROR [MediaModerationProcessor] Moderation failed for 8578f148-2705-4f9a-8146-9dd7fd696bd6: Failed to decode video.
+2026-06-21T10:35:14.118088104Z [Nest] 83  - 06/21/2026, 10:35:14 AM   ERROR [AllExceptionsFilter] Exception: Provide at least one of: content, media, mediaId, stack: BadRequestException: Provide at least one of: content, media, mediaId
+2026-06-21T10:35:14.118113545Z     at /opt/render/project/src/dist/modules/status/status.service.js:152:27
+2026-06-21T10:35:14.118119325Z     at EntityManager.transaction (/opt/render/project/src/node_modules/typeorm/entity-manager/EntityManager.js:75:34)
+2026-06-21T10:35:14.118146485Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:35:14.118153116Z     at async StatusService.createStatus (/opt/render/project/src/dist/modules/status/status.service.js:146:20)
+2026-06-21T10:35:14.118157776Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+2026-06-21T10:35:14.118162136Z     at async /opt/render/project/src/node_modules/@nestjs/core/router/router-proxy.js:9:17
+2026-06-21T10:35:22.735653567Z [Nest] 83  - 06/21/2026, 10:35:22 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:35:22.735681328Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:35:22.735687208Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:35:22.735693018Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:35:22.735698628Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:36:22.751551311Z [Nest] 83  - 06/21/2026, 10:36:22 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:36:22.751585622Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:36:22.751604172Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:36:22.751607952Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:36:22.751611243Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:37:22.758706914Z [Nest] 83  - 06/21/2026, 10:37:22 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:37:22.758740005Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:37:22.758748855Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:37:22.758757485Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:37:22.758763945Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)
+2026-06-21T10:38:22.758484447Z [Nest] 83  - 06/21/2026, 10:38:22 AM   ERROR [WsExceptionsHandler] TypeError: ack is not a function
+2026-06-21T10:38:22.758515308Z     at WsGateway.presenceHeartbeat (/opt/render/project/src/dist/realtime/gateway/ws.gateway.js:223:13)
+2026-06-21T10:38:22.758521038Z     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-06-21T10:38:22.758525728Z     at async WsGateway.<anonymous> (/opt/render/project/src/node_modules/@nestjs/websockets/context/ws-proxy.js:12:32)
+2026-06-21T10:38:22.758530328Z     at async WebSocketsController.pickResult (/opt/render/project/src/node_modules/@nestjs/websockets/web-sockets-controller.js:98:24)

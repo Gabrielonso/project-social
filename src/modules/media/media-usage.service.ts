@@ -1,34 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
-import { Media } from './entities/media.entity';
-
-const MEDIA_IN_USE_SQL = `(
-  EXISTS (SELECT 1 FROM statuses s WHERE s."mediaId" = m.id)
-  OR EXISTS (SELECT 1 FROM post_medias pm WHERE pm."mediaId" = m.id)
-  OR EXISTS (SELECT 1 FROM posts p WHERE p.sound_media_id = m.id)
-  OR EXISTS (SELECT 1 FROM ad_medias am WHERE am."mediaId" = m.id)
-  OR EXISTS (SELECT 1 FROM ads a WHERE a.sound_media_id = m.id)
-  OR EXISTS (SELECT 1 FROM message_attachments ma WHERE ma."attachmentId" = m.id)
-  OR EXISTS (SELECT 1 FROM stories st WHERE st."mediaId" = m.id)
-)`;
+import { ObjectLiteral, Repository } from 'typeorm';
+import { Post } from '../posts/entities/post.entity';
+import { PostMedia } from '../posts/entities/post-media.entity';
+import { Ad } from '../ads/entities/ads.entity';
+import { AdMedia } from '../ads/entities/ads-media.entity';
+import { Status } from '../status/entities/status.entity';
+import { MessageAttachment } from '../chats/entities/message-attachment.entity';
 
 @Injectable()
 export class MediaUsageService {
   constructor(
-    @InjectRepository(Media)
-    private readonly mediaRepo: Repository<Media>,
+    @InjectRepository(PostMedia)
+    private readonly postMediaRepo: Repository<PostMedia>,
+    @InjectRepository(Post)
+    private readonly postRepo: Repository<Post>,
+    @InjectRepository(AdMedia)
+    private readonly adMediaRepo: Repository<AdMedia>,
+    @InjectRepository(Ad)
+    private readonly adRepo: Repository<Ad>,
+    @InjectRepository(Status)
+    private readonly statusRepo: Repository<Status>,
+    @InjectRepository(MessageAttachment)
+    private readonly messageAttachmentRepo: Repository<MessageAttachment>,
   ) {}
 
   async isMediaInUse(mediaId: string): Promise<boolean> {
-    const rows = await this.mediaRepo
-      .createQueryBuilder('m')
-      .select('m.id', 'id')
-      .where('m.id = :mediaId', { mediaId })
-      .andWhere(MEDIA_IN_USE_SQL)
-      .getRawMany<{ id: string }>();
-
-    return rows.length > 0;
+    const used = await this.collectUsedMediaIds([mediaId]);
+    return used.has(mediaId);
   }
 
   async filterOrphanMediaIds(mediaIds: string[]): Promise<string[]> {
@@ -37,14 +36,45 @@ export class MediaUsageService {
       return [];
     }
 
-    const stillUsed = await this.mediaRepo
-      .createQueryBuilder('m')
+    const used = await this.collectUsedMediaIds(uniqueIds);
+    return uniqueIds.filter((id) => !used.has(id));
+  }
+
+  private async collectUsedMediaIds(mediaIds: string[]): Promise<Set<string>> {
+    const usedSets = await Promise.all([
+      this.findUsedByRelation(this.postMediaRepo, 'pm', 'media', mediaIds),
+      this.findUsedByRelation(this.postRepo, 'p', 'sound', mediaIds),
+      this.findUsedByRelation(this.adMediaRepo, 'am', 'media', mediaIds),
+      this.findUsedByRelation(this.adRepo, 'a', 'sound', mediaIds),
+      this.findUsedByRelation(this.statusRepo, 's', 'media', mediaIds),
+      this.findUsedByRelation(
+        this.messageAttachmentRepo,
+        'ma',
+        'attachment',
+        mediaIds,
+      ),
+    ]);
+
+    return new Set(usedSets.flat());
+  }
+
+  private async findUsedByRelation<T extends ObjectLiteral>(
+    repo: Repository<T>,
+    alias: string,
+    relation: string,
+    mediaIds: string[],
+  ): Promise<string[]> {
+    if (mediaIds.length === 0) {
+      return [];
+    }
+
+    const rows = await repo
+      .createQueryBuilder(alias)
+      .innerJoin(`${alias}.${relation}`, 'm')
       .select('m.id', 'id')
-      .where('m.id IN (:...uniqueIds)', { uniqueIds })
-      .andWhere(MEDIA_IN_USE_SQL)
+      .where('m.id IN (:...mediaIds)', { mediaIds })
       .getRawMany<{ id: string }>();
 
-    const usedSet = new Set(stillUsed.map((r) => r.id));
-    return uniqueIds.filter((id) => !usedSet.has(id));
+    return rows.map((row) => row.id);
   }
 }

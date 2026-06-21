@@ -28,6 +28,7 @@ import { NotificationDispatcher } from '../notification/notification.dispatcher'
 import { TagDto } from '../engagements/dtos/tag.dto';
 import { FeedCacheInvalidationService } from '../feeds/feed-cache-invalidation.service';
 import { MediaAttachValidator } from '../media/media-attach.validator';
+import { MediaDeletionService } from '../media/media-deletion.service';
 import { ContentPublishStatus } from '../media/enums/content-publish-status.enum';
 
 @Injectable()
@@ -44,6 +45,7 @@ export class PostService {
     private readonly notificationDispatcher: NotificationDispatcher,
     private readonly feedCacheInvalidation: FeedCacheInvalidationService,
     private readonly mediaAttachValidator: MediaAttachValidator,
+    private readonly mediaDeletionService: MediaDeletionService,
   ) {}
 
   private async notifyPostTags(
@@ -535,13 +537,17 @@ export class PostService {
 
   async deletePost(postId: string, userId: string) {
     try {
+      let mediaIdsToCleanup: string[] = [];
+
       const result = await this.dataSource.manager.transaction(
         async (entityManager) => {
           const postRepo = entityManager.getRepository(Post);
-          const mediaRepo = entityManager.getRepository(Media);
           const postMediaRepo = entityManager.getRepository(PostMedia);
           const tagRepo = entityManager.getRepository(Tag);
-          const post = await postRepo.findOne({ where: { id: postId } });
+          const post = await postRepo.findOne({
+            where: { id: postId },
+            relations: { medias: { media: true }, sound: true },
+          });
           if (!post) {
             throw new HttpException(
               { statusCode: HttpStatus.NOT_FOUND, message: 'Post not found' },
@@ -555,14 +561,12 @@ export class PostService {
             );
           }
 
-          const postMedias = await postMediaRepo.find({
-            where: { post: { id: postId } },
-          });
-          for (const postMedia of postMedias) {
-            await mediaRepo.delete({ id: postMedia.media.id });
-            await postMediaRepo.delete({ id: postMedia.id });
-          }
+          mediaIdsToCleanup = [
+            ...(post.medias ?? []).map((pm) => pm.media?.id),
+            post.sound?.id,
+          ].filter((id): id is string => !!id);
 
+          await postMediaRepo.delete({ post: { id: postId } });
           await postRepo.delete({ id: postId });
 
           await tagRepo.delete({ entity: FeedType.POST, entityId: postId });
@@ -575,6 +579,11 @@ export class PostService {
           return successResponse('Successfully deleted post');
         },
       );
+
+      if (mediaIdsToCleanup.length > 0) {
+        await this.mediaDeletionService.deleteOrphanMedias(mediaIdsToCleanup);
+      }
+
       await this.safeInvalidateFeedCaches(() =>
         this.feedCacheInvalidation.invalidatePostAndPublicList(postId),
       );

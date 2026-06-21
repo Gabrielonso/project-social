@@ -32,6 +32,7 @@ export class MediaQueueService {
       if (['waiting', 'delayed', 'active'].includes(state)) {
         return;
       }
+      await existing.remove();
     }
 
     await this.cancelQueue.add(

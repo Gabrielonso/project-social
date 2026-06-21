@@ -22,6 +22,7 @@ import { MediaProvider } from './enums/media-provider.enum';
 import { S3Provider } from 'src/common/s3/s3.provider';
 import { getDefaultMediaProvider } from 'src/config/aws.config';
 import { MediaQueueService } from './media-queue.service';
+import { effectiveMediaStatus } from './media-delivery.util';
 
 @Injectable()
 export class MediaService {
@@ -127,14 +128,13 @@ export class MediaService {
   }
 
   private serializeUpload(media: Media) {
-    const playback =
-      media.status === MediaStatus.READY
-        ? this.urlResolver.toPlaybackPayload(media)
-        : null;
+    const playback = this.urlResolver.hasPlayback(media)
+      ? this.urlResolver.toPlaybackPayload(media)
+      : null;
 
     return {
       id: media.id,
-      status: media.status,
+      status: effectiveMediaStatus(media),
       moderationStatus: media.moderationStatus,
       rejectionReason: media.rejectionReason,
       provider: media.provider,

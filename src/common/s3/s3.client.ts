@@ -11,6 +11,11 @@ export function getS3Client(): S3 {
       accessKeyId: awsConfig.credentials.accessKeyId,
       secretAccessKey: awsConfig.credentials.secretAccessKey,
       signatureVersion: 'v4',
+      httpOptions: {
+        connectTimeout: 60_000,
+        timeout: 900_000,
+      },
+      maxRetries: 3,
     });
   }
   return s3Client;

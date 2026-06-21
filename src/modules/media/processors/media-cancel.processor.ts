@@ -10,9 +10,7 @@ import {
 import { MediaCancelPayload } from '../media-queue.service';
 import { Media } from '../entities/media.entity';
 import { MediaUsageService } from '../media-usage.service';
-import { MediaQueueService } from '../media-queue.service';
-import { MediaStorageRegistry } from 'src/common/media/media-storage.registry';
-import { MediaDeleteSnapshot } from 'src/common/interfaces/media-provider.interface';
+import { MediaDeletionService } from '../media-deletion.service';
 import { WsGateway } from 'src/realtime/gateway/ws.gateway';
 
 @Processor(MEDIA_CANCEL_QUEUE)
@@ -23,8 +21,7 @@ export class MediaCancelProcessor extends WorkerHost {
     @InjectRepository(Media)
     private readonly mediaRepo: Repository<Media>,
     private readonly mediaUsageService: MediaUsageService,
-    private readonly mediaQueueService: MediaQueueService,
-    private readonly storageRegistry: MediaStorageRegistry,
+    private readonly mediaDeletionService: MediaDeletionService,
     @Inject(forwardRef(() => WsGateway))
     private readonly wsGateway: WsGateway,
   ) {
@@ -61,20 +58,7 @@ export class MediaCancelProcessor extends WorkerHost {
         return;
       }
 
-      const snapshot: MediaDeleteSnapshot = {
-        provider: media.provider,
-        sourceIdOrKey: media.sourceIdOrKey,
-        variants: media.variants ?? undefined,
-        type: media.type,
-      };
-
-      await this.mediaQueueService.removePendingJobsForMedia(mediaId);
-      await this.mediaRepo.delete({ id: mediaId });
-
-      const provider = this.storageRegistry.get(snapshot.provider);
-      if (provider.deleteMediaSnapshot) {
-        await provider.deleteMediaSnapshot(snapshot);
-      }
+      await this.mediaDeletionService.purgeMedia(media, { force: true });
 
       this.emitCancelled(userId, mediaId);
     } catch (error) {
