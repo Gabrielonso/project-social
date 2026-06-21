@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import {
   GenerateUploadInput,
   IMediaStorageProvider,
+  MediaDeleteSnapshot,
   PlaybackUrls,
   UploadCredentials,
 } from '../interfaces/media-provider.interface';
@@ -118,5 +119,95 @@ export class S3Provider implements IMediaStorageProvider {
       poster,
       low: this.urlForKey(variants.low),
     };
+  }
+
+  collectKeysFromSnapshot(snapshot: MediaDeleteSnapshot): string[] {
+    const keys = new Set<string>();
+    keys.add(snapshot.sourceIdOrKey);
+
+    const variants = snapshot.variants ?? {};
+    for (const value of Object.values(variants)) {
+      if (value) {
+        keys.add(value);
+      }
+    }
+
+    if (snapshot.type === MediaType.VIDEO) {
+      const baseKey = snapshot.sourceIdOrKey.replace(/\.[^/.]+$/, '');
+      keys.add(`${baseKey}/hls/stream.mp4`);
+      keys.add(`${baseKey}/hls/index.m3u8`);
+      keys.add(`${baseKey}-poster.webp`);
+    }
+
+    if (snapshot.type === MediaType.IMAGE) {
+      const baseKey = snapshot.sourceIdOrKey.replace(/\.[^/.]+$/, '');
+      keys.add(`${baseKey}-thumb.webp`);
+      keys.add(`${baseKey}-low.webp`);
+    }
+
+    return [...keys];
+  }
+
+  async listKeysUnderPrefix(prefix: string): Promise<string[]> {
+    const bucket = getS3Bucket();
+    const keys: string[] = [];
+    let continuationToken: string | undefined;
+
+    do {
+      const response = await getS3Client()
+        .listObjectsV2({
+          Bucket: bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        })
+        .promise();
+
+      for (const item of response.Contents ?? []) {
+        if (item.Key) {
+          keys.push(item.Key);
+        }
+      }
+
+      continuationToken = response.IsTruncated
+        ? response.NextContinuationToken
+        : undefined;
+    } while (continuationToken);
+
+    return keys;
+  }
+
+  async deleteKeys(keys: string[]): Promise<void> {
+    const uniqueKeys = [...new Set(keys.filter(Boolean))];
+    if (uniqueKeys.length === 0) {
+      return;
+    }
+
+    const bucket = getS3Bucket();
+    const chunkSize = 1000;
+
+    for (let i = 0; i < uniqueKeys.length; i += chunkSize) {
+      const chunk = uniqueKeys.slice(i, i + chunkSize);
+      await getS3Client()
+        .deleteObjects({
+          Bucket: bucket,
+          Delete: {
+            Objects: chunk.map((Key) => ({ Key })),
+            Quiet: true,
+          },
+        })
+        .promise();
+    }
+  }
+
+  async deleteMediaSnapshot(snapshot: MediaDeleteSnapshot): Promise<void> {
+    const keys = this.collectKeysFromSnapshot(snapshot);
+
+    if (snapshot.type === MediaType.VIDEO) {
+      const baseKey = snapshot.sourceIdOrKey.replace(/\.[^/.]+$/, '');
+      const hlsKeys = await this.listKeysUnderPrefix(`${baseKey}/hls/`);
+      keys.push(...hlsKeys);
+    }
+
+    await this.deleteKeys(keys);
   }
 }

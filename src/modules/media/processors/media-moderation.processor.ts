@@ -10,6 +10,7 @@ import { MediaStatus } from '../enums/media-status.enum';
 import { ModerationStatus } from '../enums/moderation-status.enum';
 import { MediaModerationService } from 'src/common/moderation/media-moderation.service';
 import { ModerationPolicyService } from 'src/common/moderation/moderation-policy.service';
+import { ContentPublishService } from '../content-publish.service';
 
 @Processor(MEDIA_MODERATION_QUEUE)
 export class MediaModerationProcessor extends WorkerHost {
@@ -21,6 +22,7 @@ export class MediaModerationProcessor extends WorkerHost {
     private readonly moderationService: MediaModerationService,
     private readonly moderationPolicy: ModerationPolicyService,
     private readonly pipelineService: MediaPipelineService,
+    private readonly contentPublishService: ContentPublishService,
   ) {
     super();
   }
@@ -30,9 +32,13 @@ export class MediaModerationProcessor extends WorkerHost {
       return;
     }
 
-    const media = await this.mediaRepo.findOneByOrFail({
-      id: job.data.mediaId,
+    const media = await this.mediaRepo.findOne({
+      where: { id: job.data.mediaId },
     });
+
+    if (!media) {
+      return;
+    }
 
     if (!this.moderationPolicy.shouldModerate(media)) {
       await this.mediaRepo.update(media.id, {
@@ -53,6 +59,7 @@ export class MediaModerationProcessor extends WorkerHost {
           rejectionReason: result.rejectionReason,
           moderatedAt: new Date(),
         });
+        await this.contentPublishService.onMediaTerminalUpdate(media.id);
         return;
       }
 
@@ -71,6 +78,7 @@ export class MediaModerationProcessor extends WorkerHost {
         rejectionReason:
           error instanceof Error ? error.message : 'Moderation failed',
       });
+      await this.contentPublishService.onMediaTerminalUpdate(media.id);
       throw error;
     }
   }

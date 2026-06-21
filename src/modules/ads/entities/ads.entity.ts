@@ -11,6 +11,7 @@ import { User } from 'src/modules/user/entity/user.entity';
 import { AdMedia } from './ads-media.entity';
 import { Gender } from 'src/common/enums/gender.enum';
 import { Media } from 'src/modules/media/entities/media.entity';
+import { ContentPublishStatus } from 'src/modules/media/enums/content-publish-status.enum';
 
 @Entity('ads')
 export class Ad {
@@ -49,6 +50,14 @@ export class Ad {
 
   @Column({ default: 'active' })
   status: 'active' | 'paused' | 'ended';
+
+  @Column({
+    name: 'publish_status',
+    type: 'enum',
+    enum: ContentPublishStatus,
+    default: ContentPublishStatus.PUBLISHED,
+  })
+  publishStatus: ContentPublishStatus;
 
   @Column({ name: 'like_count', default: 0 })
   likeCount: number;

@@ -45,7 +45,7 @@ import { MediaModule } from '../media/media.module';
     forwardRef(() => RealtimeModule),
     NotificationModule,
     UserDisplayModule,
-    MediaModule,
+    forwardRef(() => MediaModule),
   ],
   controllers: [ChatController],
   exports: [ChatsService],

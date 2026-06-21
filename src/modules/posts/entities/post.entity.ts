@@ -11,6 +11,7 @@ import {
 
 import { PostMedia } from './post-media.entity';
 import { Media } from 'src/modules/media/entities/media.entity';
+import { ContentPublishStatus } from 'src/modules/media/enums/content-publish-status.enum';
 
 @Entity('posts')
 @Index(['ownerId'])
@@ -50,6 +51,14 @@ export class Post {
 
   @Column({ name: 'is_public', default: true })
   isPublic: boolean;
+
+  @Column({
+    name: 'publish_status',
+    type: 'enum',
+    enum: ContentPublishStatus,
+    default: ContentPublishStatus.PUBLISHED,
+  })
+  publishStatus: ContentPublishStatus;
 
   @Column({ name: 'location', nullable: true })
   location?: string;

@@ -569,6 +569,7 @@ export class FeedService {
           p.created_at AS "createdAt"
         FROM posts p
         WHERE p.is_public = true
+          AND p.publish_status = 'published'
           AND (
             $2::timestamp IS NULL
             OR (p.created_at, p.id) < ($2::timestamp, $3::uuid)
@@ -583,7 +584,8 @@ export class FeedService {
           'ad' AS type,
           a.created_at AS "createdAt"
         FROM ads a
-        WHERE (
+        WHERE a.publish_status = 'published'
+          AND (
           $2::timestamp IS NULL
           OR (a.created_at, a.id) < ($2::timestamp, $3::uuid)
         )
@@ -760,7 +762,7 @@ export class FeedService {
           NULL AS "repostedById"
         FROM posts p
         WHERE p.owner_id = $3
-          AND ($4::boolean = true OR p.is_public = true)
+          AND ($4::boolean = true OR (p.is_public = true AND p.publish_status = 'published'))
       )
       UNION ALL
       (
@@ -770,6 +772,7 @@ export class FeedService {
           a.created_at AS "createdAt",
           NULL AS "repostedById"
         FROM ads a WHERE a.owner_id = $3
+          AND ($4::boolean = true OR a.publish_status = 'published')
       )
       UNION ALL
       (
@@ -783,7 +786,7 @@ export class FeedService {
           AND EXISTS (
             SELECT 1 FROM posts p2
             WHERE p2.id = r.post_id
-              AND ($4::boolean = true OR p2.is_public = true)
+              AND ($4::boolean = true OR (p2.is_public = true AND p2.publish_status = 'published'))
           )
       )
       ORDER BY "createdAt" DESC
@@ -793,16 +796,16 @@ export class FeedService {
     );
     const totalRows: Array<{ count: string }> = await this.dataSource.query(
       `SELECT COUNT(*) FROM (
-  SELECT id FROM posts WHERE owner_id = $1 AND ($2::boolean = true OR is_public = true)
+  SELECT id FROM posts WHERE owner_id = $1 AND ($2::boolean = true OR (is_public = true AND publish_status = 'published'))
   UNION ALL
-  SELECT id FROM ads WHERE owner_id = $1
+  SELECT id FROM ads WHERE owner_id = $1 AND ($2::boolean = true OR publish_status = 'published')
   UNION ALL
   SELECT r.post_id AS id FROM reposts r
   WHERE r.user_id = $1
     AND EXISTS (
       SELECT 1 FROM posts p2
       WHERE p2.id = r.post_id
-        AND ($2::boolean = true OR p2.is_public = true)
+        AND ($2::boolean = true OR (p2.is_public = true AND p2.publish_status = 'published'))
     )
 ) t`,
       [userId, canViewAllPosts],
@@ -832,6 +835,7 @@ export class FeedService {
               FROM posts p
               WHERE p.id = t.entity_id::uuid
                 AND p.is_public = true
+                AND p.publish_status = 'published'
             )
           )
       ORDER BY "createdAt" DESC
@@ -855,6 +859,7 @@ export class FeedService {
               FROM posts p
               WHERE p.id = t.entity_id::uuid
                 AND p.is_public = true
+                AND p.publish_status = 'published'
             )
           )
           ) t`,
@@ -889,6 +894,7 @@ export class FeedService {
               FROM posts p
               WHERE p.id = t.entity_id::uuid
                 AND p.is_public = true
+                AND p.publish_status = 'published'
             )
           )
       ORDER BY "createdAt" DESC
@@ -912,6 +918,7 @@ export class FeedService {
               FROM posts p
               WHERE p.id = t.entity_id::uuid
                 AND p.is_public = true
+                AND p.publish_status = 'published'
             )
           )
           ) t`,

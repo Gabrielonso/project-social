@@ -61,38 +61,39 @@ export class ChatMessageListener {
         if (!payload.userId) {
           throw new Error('userId is required for attachment media IDs');
         }
-      } else if (payload.attachments) {
-        if (!payload.attachments.length || payload.attachments.length == 0)
-          throw new Error('No content in attachments');
-
-        for (let index = 0; index < payload.attachments.length; index++) {
-          const attachment = payload.attachments[index];
-
-          if (
-            !attachment.type ||
-            !attachment.provider ||
-            !attachment.originalUrl ||
-            !attachment.sourceIdOrKey
-          ) {
-            throw new HttpException(
-              {
-                statusCode: HttpStatus.BAD_REQUEST,
-                message:
-                  'Please specify type, provider, url and key for all attachments',
-              },
-              HttpStatus.BAD_REQUEST,
-            );
-          }
-
-          if (
-            !attachment.sourceIdOrKey.startsWith(
-              `${MediaUploadFolder.MESSAGES}/${payload.userId}/`,
-            )
-          ) {
-            throw new ForbiddenException('Invalid media ownership or folder');
-          }
-        }
       }
+      //  else if (payload.attachments) {
+      //   if (!payload.attachments.length || payload.attachments.length == 0)
+      //     throw new Error('No content in attachments');
+
+      //   for (let index = 0; index < payload.attachments.length; index++) {
+      //     const attachment = payload.attachments[index];
+
+      //     if (
+      //       !attachment.type ||
+      //       !attachment.provider ||
+      //       !attachment.originalUrl ||
+      //       !attachment.sourceIdOrKey
+      //     ) {
+      //       throw new HttpException(
+      //         {
+      //           statusCode: HttpStatus.BAD_REQUEST,
+      //           message:
+      //             'Please specify type, provider, url and key for all attachments',
+      //         },
+      //         HttpStatus.BAD_REQUEST,
+      //       );
+      //     }
+
+      //     if (
+      //       !attachment.sourceIdOrKey.startsWith(
+      //         `${MediaUploadFolder.MESSAGES}/${payload.userId}/`,
+      //       )
+      //     ) {
+      //       throw new ForbiddenException('Invalid media ownership or folder');
+      //     }
+      //   }
+      // }
       // 🔥 3. Get REAL participants from DB
       const participants = await this.chatService.getChatParticipants(chatId);
 

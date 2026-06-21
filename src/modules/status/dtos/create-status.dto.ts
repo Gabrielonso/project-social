@@ -27,12 +27,12 @@ export class CreateStatusDto {
   @IsUUID('4')
   mediaId?: string;
 
-  @ApiPropertyOptional({
-    description: 'Status media (legacy Cloudinary flow).',
-    type: MediaDto,
-  })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => MediaDto)
-  media?: MediaDto;
+  // @ApiPropertyOptional({
+  //   description: 'Status media (legacy Cloudinary flow).',
+  //   type: MediaDto,
+  // })
+  // @IsOptional()
+  // @ValidateNested()
+  // @Type(() => MediaDto)
+  // media?: MediaDto;
 }

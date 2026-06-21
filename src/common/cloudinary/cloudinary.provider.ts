@@ -3,6 +3,7 @@ import { cloudinary } from 'src/config/cloudinary.config';
 import {
   GenerateUploadInput,
   IMediaStorageProvider,
+  MediaDeleteSnapshot,
   PlaybackUrls,
   UploadCredentials,
 } from '../interfaces/media-provider.interface';
@@ -76,5 +77,17 @@ export class CloudinaryProvider implements IMediaStorageProvider {
           : cloudinary.url(publicId, { resource_type: 'image', secure: true })),
       low: media.lowUrl ?? null,
     };
+  }
+
+  async deleteMediaSnapshot(snapshot: MediaDeleteSnapshot): Promise<void> {
+    const resourceType =
+      snapshot.type === MediaType.VIDEO || snapshot.type === MediaType.AUDIO
+        ? 'video'
+        : 'image';
+
+    await cloudinary.uploader.destroy(snapshot.sourceIdOrKey, {
+      resource_type: resourceType,
+      invalidate: true,
+    });
   }
 }

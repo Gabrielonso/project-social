@@ -4,6 +4,7 @@ import { In, LessThan, Repository } from 'typeorm';
 import { Status } from './entities/status.entity';
 import { StatusView } from './entities/status-view.entity';
 import { Media } from '../media/entities/media.entity';
+import { MediaUsageService } from '../media/media-usage.service';
 
 const PURGE_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -17,6 +18,7 @@ export class StatusCleanupService implements OnModuleInit {
     @InjectRepository(StatusView)
     private readonly statusViewRepo: Repository<StatusView>,
     @InjectRepository(Media) private readonly mediaRepo: Repository<Media>,
+    private readonly mediaUsageService: MediaUsageService,
   ) {}
 
   onModuleInit() {
@@ -59,28 +61,7 @@ export class StatusCleanupService implements OnModuleInit {
   }
 
   async deleteOrphanMedias(mediaIds: string[]): Promise<void> {
-    const uniqueIds = [...new Set(mediaIds)];
-    if (uniqueIds.length === 0) return;
-
-    const stillUsed = await this.mediaRepo
-      .createQueryBuilder('m')
-      .select('m.id', 'id')
-      .where('m.id IN (:...uniqueIds)', { uniqueIds })
-      .andWhere(
-        `(
-          EXISTS (SELECT 1 FROM statuses s WHERE s."mediaId" = m.id)
-          OR EXISTS (SELECT 1 FROM post_medias pm WHERE pm."mediaId" = m.id)
-          OR EXISTS (SELECT 1 FROM posts p WHERE p.sound_media_id = m.id)
-          OR EXISTS (SELECT 1 FROM ad_medias am WHERE am."mediaId" = m.id)
-          OR EXISTS (SELECT 1 FROM ads a WHERE a.sound_media_id = m.id)
-          OR EXISTS (SELECT 1 FROM message_attachments ma WHERE ma."attachmentId" = m.id)
-          OR EXISTS (SELECT 1 FROM stories st WHERE st."mediaId" = m.id)
-        )`,
-      )
-      .getRawMany<{ id: string }>();
-
-    const usedSet = new Set(stillUsed.map((r) => r.id));
-    const orphanIds = uniqueIds.filter((id) => !usedSet.has(id));
+    const orphanIds = await this.mediaUsageService.filterOrphanMediaIds(mediaIds);
     if (orphanIds.length > 0) {
       await this.mediaRepo.delete({ id: In(orphanIds) });
     }

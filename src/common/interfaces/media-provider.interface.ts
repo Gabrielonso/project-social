@@ -4,6 +4,13 @@ import { MediaStatus } from 'src/modules/media/enums/media-status.enum';
 import { MediaType } from 'src/modules/media/enums/media-type.enum';
 import { MediaUploadFolder } from 'src/modules/media/enums/media-upload-folder.enum';
 
+export interface MediaDeleteSnapshot {
+  provider: MediaProviderType;
+  sourceIdOrKey: string;
+  variants?: Record<string, string>;
+  type: MediaType;
+}
+
 export interface GenerateUploadInput {
   userId: string;
   type: MediaType;
@@ -41,6 +48,8 @@ export interface IMediaStorageProvider {
   getPlaybackUrls(media: Media): PlaybackUrls;
 
   objectExists?(key: string): Promise<boolean>;
+
+  deleteMediaSnapshot?(snapshot: MediaDeleteSnapshot): Promise<void>;
 }
 
 export interface CreateUploadSessionResult {

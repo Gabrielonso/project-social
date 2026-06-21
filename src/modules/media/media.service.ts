@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpStatus,
   Inject,
   Injectable,
   NotFoundException,
@@ -20,6 +21,7 @@ import { MediaPipelineService } from './media-pipeline.service';
 import { MediaProvider } from './enums/media-provider.enum';
 import { S3Provider } from 'src/common/s3/s3.provider';
 import { getDefaultMediaProvider } from 'src/config/aws.config';
+import { MediaQueueService } from './media-queue.service';
 
 @Injectable()
 export class MediaService {
@@ -32,6 +34,7 @@ export class MediaService {
     private readonly urlResolver: MediaUrlResolver,
     private readonly pipelineService: MediaPipelineService,
     private readonly s3Provider: S3Provider,
+    private readonly mediaQueueService: MediaQueueService,
   ) {}
 
   async createUploadCredentials(userId: string, dto: CreateUploadDto) {
@@ -112,6 +115,15 @@ export class MediaService {
       throw new ForbiddenException('You do not own this media upload');
     }
     return successResponse('Upload status', this.serializeUpload(media));
+  }
+
+  async requestCancelUpload(userId: string, mediaId: string) {
+    await this.mediaQueueService.enqueueCancel(mediaId, userId);
+    return successResponse(
+      'Cancel requested',
+      { mediaId, pending: true },
+      HttpStatus.ACCEPTED,
+    );
   }
 
   private serializeUpload(media: Media) {

@@ -57,7 +57,7 @@ export class SoundsService {
       WITH sound_usage AS (
         SELECT p.sound_media_id AS media_id, p.created_at
         FROM posts p
-        WHERE p.sound_media_id IS NOT NULL AND p.is_public = true ${postDateFilter}
+        WHERE p.sound_media_id IS NOT NULL AND p.is_public = true AND p.publish_status = 'published' ${postDateFilter}
         UNION ALL
         SELECT a.sound_media_id AS media_id, a.created_at
         FROM ads a
@@ -131,6 +131,7 @@ export class SoundsService {
         FROM posts p
         WHERE p.sound_media_id = $3
           AND p.is_public = true
+          AND p.publish_status = 'published'
       )
       UNION ALL
       (
@@ -156,6 +157,7 @@ export class SoundsService {
         FROM posts p
         WHERE p.sound_media_id = $1
           AND p.is_public = true
+          AND p.publish_status = 'published'
       )
       UNION ALL
       (

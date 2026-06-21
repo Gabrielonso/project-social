@@ -101,9 +101,11 @@ export class TrendsService {
         SELECT unnest(COALESCE(p.hashtags, ARRAY[]::text[])) AS tag, p.created_at AS created_at
         FROM posts p
         WHERE p.is_public = true
+          AND p.publish_status = 'published'
         UNION ALL
         SELECT unnest(COALESCE(a.hashtags, ARRAY[]::text[])) AS tag, a.created_at AS created_at
         FROM ads a
+        WHERE a.publish_status = 'published'
       )
       SELECT
         tag,
@@ -134,6 +136,7 @@ export class TrendsService {
         FROM posts p
         WHERE $3 = ANY(COALESCE(p.hashtags, ARRAY[]::text[]))
           AND p.is_public = true
+          AND p.publish_status = 'published'
       )
       UNION ALL
       (
@@ -142,7 +145,8 @@ export class TrendsService {
           'ad' AS type,
           a.created_at AS "createdAt"
         FROM ads a
-        WHERE $3 = ANY(COALESCE(a.hashtags, ARRAY[]::text[]))
+        WHERE a.publish_status = 'published'
+          AND $3 = ANY(COALESCE(a.hashtags, ARRAY[]::text[]))
       )
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
@@ -159,6 +163,7 @@ export class TrendsService {
         FROM posts p
         WHERE $1 = ANY(COALESCE(p.hashtags, ARRAY[]::text[]))
           AND p.is_public = true
+          AND p.publish_status = 'published'
       )
       UNION ALL
       (
@@ -167,7 +172,8 @@ export class TrendsService {
           'ad' AS type,
           a.created_at AS "createdAt"
         FROM ads a
-        WHERE $1 = ANY(COALESCE(a.hashtags, ARRAY[]::text[]))
+        WHERE a.publish_status = 'published'
+          AND $1 = ANY(COALESCE(a.hashtags, ARRAY[]::text[]))
       )
       ) t`,
       [tag],

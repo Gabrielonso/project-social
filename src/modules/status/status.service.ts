@@ -22,6 +22,8 @@ import { UserDisplayService } from '../user/user-display.service';
 import { UserDisplayDto } from '../user/types/user-display.types';
 import { resolveUserDisplay } from '../user/helpers/user-display.helper';
 import { MediaAttachValidator } from '../media/media-attach.validator';
+import { ContentPublishService } from '../media/content-publish.service';
+import { ContentPublishStatus } from '../media/enums/content-publish-status.enum';
 
 export type StatusWithViewMeta = Status & {
   viewedByMe: boolean;
@@ -49,10 +51,18 @@ export class StatusService {
     private readonly statusCleanup: StatusCleanupService,
     private readonly userDisplayService: UserDisplayService,
     private readonly mediaAttachValidator: MediaAttachValidator,
+    private readonly contentPublishService: ContentPublishService,
   ) {}
 
   private getExpiryDate(hours = 24) {
     return new Date(Date.now() + hours * 60 * 60 * 1000);
+  }
+
+  private isVisibleToViewer(status: Status, viewerId?: string): boolean {
+    if (status.publishStatus === ContentPublishStatus.PUBLISHED) {
+      return true;
+    }
+    return !!viewerId && status.ownerId === viewerId;
   }
 
   private async getFeedOwnerIds(viewerId: string): Promise<string[]> {
@@ -69,6 +79,7 @@ export class StatusService {
   ): Promise<boolean> {
     const now = new Date();
     if (status.expiresAt <= now) return false;
+    if (!this.isVisibleToViewer(status, viewerId)) return false;
     if (status.ownerId === viewerId) return true;
     const follow = await this.followRepo.findOne({
       where: { followerId: viewerId, followingId: status.ownerId },
@@ -124,6 +135,9 @@ export class StatusService {
       )
       .where('s.ownerId IN (:...ownerIds)', { ownerIds })
       .andWhere('s.expiresAt > :now', { now })
+      .andWhere('s.publishStatus = :published', {
+        published: ContentPublishStatus.PUBLISHED,
+      })
       .andWhere('v.id IS NULL')
       .select('DISTINCT s.ownerId', 'ownerId')
       .getRawMany<{ ownerId: string }>();
@@ -170,7 +184,11 @@ export class StatusService {
           const userRepo = entityManager.getRepository(User);
           const statusRepo = entityManager.getRepository(Status);
 
-          if (!dto.content && !dto.media && !dto.mediaId) {
+          if (
+            !dto.content &&
+            // && !dto.media
+            !dto.mediaId
+          ) {
             throw new BadRequestException(
               'Provide at least one of: content, media, mediaId',
             );
@@ -182,56 +200,67 @@ export class StatusService {
           });
           if (!owner) throw new NotFoundException('User not found');
 
-          const status = statusRepo.create({
-            ownerId,
-            content: dto.content?.trim() || undefined,
-            type: dto.content ? StatusType.THOUGHT : StatusType.MEDIA,
-            expiresAt: this.getExpiryDate(24),
-          });
-
           let media: Media | null = null;
           if (dto.mediaId) {
             const [attached] =
-              await this.mediaAttachValidator.validateMediaIdsForAttach(
+              await this.mediaAttachValidator.validateMediaIdsForAttachPending(
                 [dto.mediaId],
                 ownerId,
                 MediaUploadFolder.STATUS,
               );
             media = attached;
-            status.media = media;
-            status.type = dto.content ? StatusType.THOUGHT : StatusType.MEDIA;
-          } else if (dto.media) {
-            const m = dto.media;
-
-            if (
-              !m.sourceIdOrKey.startsWith(
-                `${MediaUploadFolder.STATUS}/${ownerId}/`,
-              )
-            ) {
-              throw new ForbiddenException('Invalid media ownership or folder');
-            }
-
-            const created = mediaRepo.create({
-              provider: m.provider,
-              type: m.type,
-              sourceIdOrKey: m.sourceIdOrKey,
-              duration: m.duration,
-              status: this.mediaAttachValidator.resolveLegacyStatus(
-                m.provider,
-                m.type,
-              ),
-              originalUrl: m.originalUrl,
-              streamUrl: m.streamUrl,
-              size: m.size,
-            });
-
-            media = await mediaRepo.save(created);
-            status.media = media;
-            status.type = dto.content ? StatusType.THOUGHT : StatusType.MEDIA;
           }
+          // else if (dto.media) {
+          //   const m = dto.media;
 
-          await statusRepo.save(status);
-          return successResponse('Successfully created status');
+          //   if (
+          //     !m.sourceIdOrKey.startsWith(
+          //       `${MediaUploadFolder.STATUS}/${ownerId}/`,
+          //     )
+          //   ) {
+          //     throw new ForbiddenException('Invalid media ownership or folder');
+          //   }
+
+          //   const created = mediaRepo.create({
+          //     provider: m.provider,
+          //     type: m.type,
+          //     sourceIdOrKey: m.sourceIdOrKey,
+          //     duration: m.duration,
+          //     status: this.mediaAttachValidator.resolveLegacyStatus(
+          //       m.provider,
+          //       m.type,
+          //     ),
+          //     originalUrl: m.originalUrl,
+          //     streamUrl: m.streamUrl,
+          //     size: m.size,
+          //   });
+
+          //   media = await mediaRepo.save(created);
+          // }
+
+          const publishStatus = media
+            ? this.mediaAttachValidator.resolveInitialPublishStatus([media])
+            : ContentPublishStatus.PUBLISHED;
+
+          const expiresAt =
+            publishStatus === ContentPublishStatus.PENDING
+              ? this.contentPublishService.getPendingStatusExpiryDate()
+              : this.getExpiryDate(24);
+
+          const status = statusRepo.create({
+            ownerId,
+            content: dto.content?.trim() || undefined,
+            type: dto.content ? StatusType.THOUGHT : StatusType.MEDIA,
+            expiresAt,
+            publishStatus,
+            media: media ?? undefined,
+          });
+
+          const savedStatus = await statusRepo.save(status);
+          return successResponse('Successfully created status', {
+            statusId: savedStatus.id,
+            publishStatus: savedStatus.publishStatus,
+          });
         },
       );
     } catch (error) {
@@ -266,7 +295,9 @@ export class StatusService {
     });
 
     const now = new Date();
-    const active = items.filter((s) => s.expiresAt > now);
+    const active = items
+      .filter((s) => s.expiresAt > now)
+      .filter((s) => this.isVisibleToViewer(s, viewerId));
 
     let data: StatusWithViewMeta[];
     const ownerDisplayMap = await this.userDisplayService.getByIds([ownerId]);
@@ -310,6 +341,9 @@ export class StatusService {
         .createQueryBuilder('s')
         .where('s.ownerId IN (:...ids)', { ids })
         .andWhere('s.expiresAt > :now', { now })
+        .andWhere('s.publishStatus = :published', {
+          published: ContentPublishStatus.PUBLISHED,
+        })
         .select('COUNT(DISTINCT s.ownerId)', 'cnt')
         .getRawOne<{ cnt: string }>();
       const totalOwners = parseInt(totalOwnersRaw?.cnt ?? '0', 10) || 0;
@@ -318,6 +352,9 @@ export class StatusService {
         .createQueryBuilder('s')
         .where('s.ownerId IN (:...ids)', { ids })
         .andWhere('s.expiresAt > :now', { now })
+        .andWhere('s.publishStatus = :published', {
+          published: ContentPublishStatus.PUBLISHED,
+        })
         .select('s.ownerId', 'ownerId')
         .addSelect('MAX(s.createdAt)', 'latest')
         .groupBy('s.ownerId')
@@ -344,7 +381,11 @@ export class StatusService {
       }
 
       const statuses = await this.statusRepo.find({
-        where: { ownerId: In(orderedOwnerIds), expiresAt: MoreThan(now) },
+        where: {
+          ownerId: In(orderedOwnerIds),
+          expiresAt: MoreThan(now),
+          publishStatus: ContentPublishStatus.PUBLISHED,
+        },
         relations: { media: true },
         order: { createdAt: 'ASC' },
       });
