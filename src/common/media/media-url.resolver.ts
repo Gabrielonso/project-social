@@ -16,6 +16,7 @@ export interface MediaPlaybackPayload {
   height?: number;
   duration?: number;
   aspectRatio?: number | null;
+  fileName?: string;
   playback: PlaybackUrls;
 }
 
@@ -42,6 +43,7 @@ export class MediaUrlResolver {
       height,
       duration: Number(media.duration) || undefined,
       aspectRatio,
+      fileName: media.fileName ?? undefined,
       playback,
     };
   }
