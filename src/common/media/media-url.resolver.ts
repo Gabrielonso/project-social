@@ -1,8 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { MediaStorageRegistry } from './media-storage.registry';
 import { Media } from 'src/modules/media/entities/media.entity';
-import { MediaStatus } from 'src/modules/media/enums/media-status.enum';
 import { PlaybackUrls } from '../interfaces/media-provider.interface';
+import {
+  effectiveMediaStatus,
+  hasDeliverableUpload,
+  isPubliclyDeliverable,
+} from 'src/modules/media/media-delivery.util';
 
 export interface MediaPlaybackPayload {
   id: string;
@@ -33,7 +37,7 @@ export class MediaUrlResolver {
     return {
       id: media.id,
       type: media.type,
-      status: media.status,
+      status: effectiveMediaStatus(media),
       width,
       height,
       duration: Number(media.duration) || undefined,
@@ -43,6 +47,10 @@ export class MediaUrlResolver {
   }
 
   isPubliclyVisible(media: Media): boolean {
-    return media.status === MediaStatus.READY;
+    return isPubliclyDeliverable(media);
+  }
+
+  hasPlayback(media: Media): boolean {
+    return hasDeliverableUpload(media);
   }
 }

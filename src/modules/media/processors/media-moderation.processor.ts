@@ -45,6 +45,7 @@ export class MediaModerationProcessor extends WorkerHost {
         moderationStatus: ModerationStatus.SKIPPED,
       });
       await this.pipelineService.enqueueTranscode(media.id);
+      await this.contentPublishService.onMediaTerminalUpdate(media.id);
       return;
     }
 
@@ -69,6 +70,7 @@ export class MediaModerationProcessor extends WorkerHost {
         moderatedAt: new Date(),
       });
       await this.pipelineService.enqueueTranscode(media.id);
+      await this.contentPublishService.onMediaTerminalUpdate(media.id);
     } catch (error) {
       this.logger.error(
         `Moderation failed for ${media.id}: ${error instanceof Error ? error.message : String(error)}`,

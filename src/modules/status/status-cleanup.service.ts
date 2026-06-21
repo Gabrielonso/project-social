@@ -3,8 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, LessThan, Repository } from 'typeorm';
 import { Status } from './entities/status.entity';
 import { StatusView } from './entities/status-view.entity';
-import { Media } from '../media/entities/media.entity';
-import { MediaUsageService } from '../media/media-usage.service';
+import { MediaDeletionService } from '../media/media-deletion.service';
 
 const PURGE_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -17,8 +16,7 @@ export class StatusCleanupService implements OnModuleInit {
     @InjectRepository(Status) private readonly statusRepo: Repository<Status>,
     @InjectRepository(StatusView)
     private readonly statusViewRepo: Repository<StatusView>,
-    @InjectRepository(Media) private readonly mediaRepo: Repository<Media>,
-    private readonly mediaUsageService: MediaUsageService,
+    private readonly mediaDeletionService: MediaDeletionService,
   ) {}
 
   onModuleInit() {
@@ -61,9 +59,6 @@ export class StatusCleanupService implements OnModuleInit {
   }
 
   async deleteOrphanMedias(mediaIds: string[]): Promise<void> {
-    const orphanIds = await this.mediaUsageService.filterOrphanMediaIds(mediaIds);
-    if (orphanIds.length > 0) {
-      await this.mediaRepo.delete({ id: In(orphanIds) });
-    }
+    await this.mediaDeletionService.deleteOrphanMedias(mediaIds);
   }
 }

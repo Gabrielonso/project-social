@@ -4,9 +4,14 @@ import { Job } from 'bullmq';
 import * as ffmpeg from 'fluent-ffmpeg';
 import * as ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import * as sharp from 'sharp';
+import { createWriteStream } from 'fs';
+import { mkdtemp, readFile, rm } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { pipeline } from 'stream/promises';
+import { PassThrough } from 'stream';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PassThrough } from 'stream';
 import { MEDIA_TRANSCODE_QUEUE } from '../media.queue';
 import { MEDIA_JOB_TRANSCODE } from '../media-pipeline.service';
 import { Media } from '../entities/media.entity';
@@ -19,7 +24,15 @@ import { S3Provider } from 'src/common/s3/s3.provider';
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
-@Processor(MEDIA_TRANSCODE_QUEUE)
+/** BullMQ default lock is 30s — video transcode can run many minutes. */
+const TRANSCODE_WORKER_OPTIONS = {
+  concurrency: 1,
+  lockDuration: 1_800_000,
+  stalledInterval: 600_000,
+  maxStalledCount: 1,
+} as const;
+
+@Processor(MEDIA_TRANSCODE_QUEUE, TRANSCODE_WORKER_OPTIONS)
 export class MediaTranscodeProcessor extends WorkerHost {
   private readonly logger = new Logger(MediaTranscodeProcessor.name);
 
@@ -49,6 +62,15 @@ export class MediaTranscodeProcessor extends WorkerHost {
       return;
     }
 
+    if (this.isTranscodeComplete(media)) {
+      this.logger.log(`Transcode already complete for ${media.id}, skipping`);
+      if (media.status !== MediaStatus.READY) {
+        await this.mediaRepo.update(media.id, { status: MediaStatus.READY });
+        await this.contentPublishService.onMediaEnriched(media.id);
+      }
+      return;
+    }
+
     try {
       if (media.type === MediaType.IMAGE) {
         await this.processImage(media);
@@ -66,23 +88,53 @@ export class MediaTranscodeProcessor extends WorkerHost {
       }
 
       await this.mediaRepo.update(media.id, { status: MediaStatus.READY });
-      await this.contentPublishService.onMediaTerminalUpdate(media.id);
+      await this.contentPublishService.onMediaEnriched(media.id);
     } catch (error) {
-      this.logger.error(
-        `Transcode failed for ${media.id}: ${error instanceof Error ? error.message : String(error)}`,
+      const message = error instanceof Error ? error.message : String(error);
+
+      const fresh = await this.mediaRepo.findOne({
+        where: { id: media.id },
+      });
+      if (fresh && this.isTranscodeComplete(fresh)) {
+        this.logger.warn(
+          `Transcode job errored after output was written for ${media.id}: ${message}`,
+        );
+        if (fresh.status !== MediaStatus.READY) {
+          await this.mediaRepo.update(media.id, { status: MediaStatus.READY });
+          await this.contentPublishService.onMediaEnriched(media.id);
+        }
+        return;
+      }
+
+      this.logger.error(`Transcode failed for ${media.id}: ${message}`);
+      this.logger.warn(
+        `Keeping media ${media.id} deliverable via original after transcode failure`,
       );
-      await this.mediaRepo.update(media.id, { status: MediaStatus.FAILED });
-      await this.contentPublishService.onMediaTerminalUpdate(media.id);
-      throw error;
+
+      await this.mediaRepo.update(media.id, {
+        status: MediaStatus.PROCESSING,
+        originalUrl: this.s3Provider.getPublicUrl(media.sourceIdOrKey),
+      });
+      await this.contentPublishService.onTranscodeFailed(media.id, message);
     }
+  }
+
+  private isTranscodeComplete(media: Media): boolean {
+    const variants = (media.variants ?? {}) as Record<string, string>;
+    if (media.type === MediaType.VIDEO) {
+      return Boolean(variants.hls && variants.poster);
+    }
+    if (media.type === MediaType.IMAGE) {
+      return Boolean(variants.low);
+    }
+    return media.status === MediaStatus.READY;
   }
 
   private async processPassthrough(media: Media) {
     const originalUrl = this.s3Provider.getPublicUrl(media.sourceIdOrKey);
     await this.mediaRepo.update(media.id, {
       originalUrl,
-      streamUrl:
-        media.type === MediaType.AUDIO ? originalUrl : media.streamUrl,
+      streamUrl: media.type === MediaType.AUDIO ? originalUrl : media.streamUrl,
     });
   }
 
@@ -126,8 +178,13 @@ export class MediaTranscodeProcessor extends WorkerHost {
     const outputPrefix = `${baseKey}/hls`;
     const mp4Key = `${outputPrefix}/stream.mp4`;
     const playlistKey = `${outputPrefix}/index.m3u8`;
+    const posterKey = `${baseKey}-poster.webp`;
 
-    await this.transcodeMp4(bucket, key, mp4Key);
+    await this.withLocalInputFile(bucket, key, async (localPath) => {
+      await this.transcodeMp4FromFile(localPath, mp4Key);
+      await this.generateVideoPosterFromFile(localPath, posterKey);
+    });
+
     await this.putObject(
       playlistKey,
       Buffer.from(
@@ -145,15 +202,32 @@ export class MediaTranscodeProcessor extends WorkerHost {
       'application/vnd.apple.mpegurl',
     );
 
-    const posterKey = `${baseKey}-poster.webp`;
-    await this.generateVideoPoster(bucket, key, posterKey);
-
     await this.mediaRepo.update(media.id, {
       originalUrl: this.s3Provider.getPublicUrl(key),
       streamUrl: this.s3Provider.getPublicUrl(playlistKey),
       thumbnailUrl: this.s3Provider.getPublicUrl(posterKey),
       variants: { hls: playlistKey, poster: posterKey },
     });
+  }
+
+  private async withLocalInputFile(
+    bucket: string,
+    key: string,
+    fn: (localPath: string) => Promise<void>,
+  ): Promise<void> {
+    const dir = await mkdtemp(join(tmpdir(), 'media-transcode-'));
+    const ext = key.includes('.') ? key.slice(key.lastIndexOf('.')) : '.bin';
+    const localPath = join(dir, `input${ext}`);
+
+    try {
+      const readStream = getS3Client()
+        .getObject({ Bucket: bucket, Key: key })
+        .createReadStream();
+      await pipeline(readStream, createWriteStream(localPath));
+      await fn(localPath);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   }
 
   private putObject(key: string, body: Buffer, contentType: string) {
@@ -167,36 +241,29 @@ export class MediaTranscodeProcessor extends WorkerHost {
       .promise();
   }
 
-  private transcodeMp4(
-    bucket: string,
-    inputKey: string,
+  private transcodeMp4FromFile(
+    localPath: string,
     outputKey: string,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
-      const inputStream = getS3Client()
-        .getObject({ Bucket: bucket, Key: inputKey })
-        .createReadStream();
       const chunks: Buffer[] = [];
       const outputStream = new PassThrough();
 
       outputStream.on('data', (chunk: Buffer) => chunks.push(chunk));
 
-      ffmpeg(inputStream)
+      ffmpeg(localPath)
+        .inputOptions(['-analyzeduration', '100M', '-probesize', '100M'])
         .videoCodec('libx264')
         .audioCodec('aac')
         .size('?x720')
         .format('mp4')
-        .outputOptions('-movflags frag_keyframe+empty_moov')
+        .outputOptions('-movflags', 'frag_keyframe+empty_moov')
         .on('error', reject)
         .pipe(outputStream, { end: true });
 
       outputStream.on('end', async () => {
         try {
-          await this.putObject(
-            outputKey,
-            Buffer.concat(chunks),
-            'video/mp4',
-          );
+          await this.putObject(outputKey, Buffer.concat(chunks), 'video/mp4');
           resolve();
         } catch (error) {
           reject(error);
@@ -205,56 +272,45 @@ export class MediaTranscodeProcessor extends WorkerHost {
     });
   }
 
-  private generateVideoPoster(
-    bucket: string,
-    inputKey: string,
+  private async generateVideoPosterFromFile(
+    localPath: string,
     posterKey: string,
   ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const inputStream = getS3Client()
-        .getObject({ Bucket: bucket, Key: inputKey })
-        .createReadStream();
-      const chunks: Buffer[] = [];
-      const outputStream = new PassThrough();
+    const posterDir = await mkdtemp(join(tmpdir(), 'media-poster-'));
 
-      outputStream.on('data', (chunk: Buffer) => chunks.push(chunk));
-
-      ffmpeg(inputStream)
-        .screenshots({
-          timestamps: ['1'],
-          count: 1,
-        })
-        .on('error', async () => {
-          try {
-            const placeholder = await sharp({
-              create: {
-                width: 640,
-                height: 360,
-                channels: 3,
-                background: { r: 20, g: 20, b: 20 },
-              },
-            })
-              .webp()
-              .toBuffer();
-            await this.putObject(posterKey, placeholder, 'image/webp');
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
-        });
-
-      outputStream.on('end', async () => {
-        try {
-          const poster = await sharp(Buffer.concat(chunks))
-            .resize(640, 360, { fit: 'cover' })
-            .webp()
-            .toBuffer();
-          await this.putObject(posterKey, poster, 'image/webp');
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
+    try {
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(localPath)
+          .screenshots({
+            timestamps: ['00:00:01.000'],
+            filename: 'frame.jpg',
+            folder: posterDir,
+            size: '640x?',
+          })
+          .on('end', () => resolve())
+          .on('error', reject);
       });
-    });
+
+      const framePath = join(posterDir, 'frame.jpg');
+      const poster = await sharp(await readFile(framePath))
+        .resize(640, 360, { fit: 'cover' })
+        .webp()
+        .toBuffer();
+      await this.putObject(posterKey, poster, 'image/webp');
+    } catch {
+      const placeholder = await sharp({
+        create: {
+          width: 640,
+          height: 360,
+          channels: 3,
+          background: { r: 20, g: 20, b: 20 },
+        },
+      })
+        .webp()
+        .toBuffer();
+      await this.putObject(posterKey, placeholder, 'image/webp');
+    } finally {
+      await rm(posterDir, { recursive: true, force: true });
+    }
   }
 }

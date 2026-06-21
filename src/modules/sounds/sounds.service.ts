@@ -7,7 +7,6 @@ import { SoundFilterDto } from './dtos/sound-filter.dto';
 import { RawFeedRow } from '../feeds/types/feed.types';
 import { Media } from '../media/entities/media.entity';
 import { MediaUrlResolver } from 'src/common/media/media-url.resolver';
-import { MediaStatus } from '../media/enums/media-status.enum';
 
 type SoundUsageRow = {
   id: string;
@@ -69,7 +68,12 @@ export class SoundsService {
         MAX(su.created_at) AS "lastUsedAt"
       FROM sound_usage su
       JOIN medias m ON m.id = su.media_id
-      WHERE m.status = '${MediaStatus.READY}'
+      WHERE m.status IN ('processing', 'ready')
+        AND m.status NOT IN ('rejected', 'uploading')
+        AND (
+          m.moderation_status IN ('passed', 'skipped')
+          OR (m.status = 'ready' AND m.moderation_status IS NULL)
+        )
       GROUP BY m.id
       ORDER BY "usageCount" DESC, "lastUsedAt" DESC
       LIMIT $${idx++} OFFSET $${idx}

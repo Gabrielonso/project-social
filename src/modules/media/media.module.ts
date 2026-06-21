@@ -13,6 +13,7 @@ import { ModerationModule } from 'src/common/moderation/moderation.module';
 import { MediaPipelineService } from './media-pipeline.service';
 import { MediaAttachValidator } from './media-attach.validator';
 import { MediaUsageService } from './media-usage.service';
+import { MediaDeletionService } from './media-deletion.service';
 import { MediaQueueService } from './media-queue.service';
 import { ContentPublishService } from './content-publish.service';
 import { MediaCancelListener } from './listeners/media-cancel.listener';
@@ -24,6 +25,7 @@ import { PostMedia } from '../posts/entities/post-media.entity';
 import { Ad } from '../ads/entities/ads.entity';
 import { AdMedia } from '../ads/entities/ads-media.entity';
 import { Status } from '../status/entities/status.entity';
+import { MessageAttachment } from '../chats/entities/message-attachment.entity';
 import { Tag } from '../engagements/entities/tag.entity';
 import { User } from '../user/entity/user.entity';
 import {
@@ -44,12 +46,20 @@ import { MediaCancelProcessor } from './processors/media-cancel.processor';
       Ad,
       AdMedia,
       Status,
+      MessageAttachment,
       Tag,
       User,
     ]),
     BullModule.registerQueue(
       { name: MEDIA_MODERATION_QUEUE },
-      { name: MEDIA_TRANSCODE_QUEUE },
+      {
+        name: MEDIA_TRANSCODE_QUEUE,
+        defaultJobOptions: {
+          attempts: 1,
+          removeOnComplete: true,
+          removeOnFail: 50,
+        },
+      },
       { name: MEDIA_CANCEL_QUEUE },
     ),
     ModerationModule,
@@ -71,6 +81,7 @@ import { MediaCancelProcessor } from './processors/media-cancel.processor';
     MediaPipelineService,
     MediaAttachValidator,
     MediaUsageService,
+    MediaDeletionService,
     MediaQueueService,
     ContentPublishService,
     MediaCancelListener,
@@ -85,6 +96,7 @@ import { MediaCancelProcessor } from './processors/media-cancel.processor';
     MediaUrlResolver,
     MediaAttachValidator,
     MediaUsageService,
+    MediaDeletionService,
     MediaService,
     ContentPublishService,
   ],

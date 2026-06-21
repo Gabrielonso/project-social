@@ -13,6 +13,7 @@ import { ModerationStatus } from './enums/moderation-status.enum';
 import { ModerationPolicyService } from 'src/common/moderation/moderation-policy.service';
 import { S3Provider } from 'src/common/s3/s3.provider';
 import { MediaProvider } from './enums/media-provider.enum';
+import { ContentPublishService } from './content-publish.service';
 
 export const MEDIA_JOB_MODERATE = 'moderate';
 export const MEDIA_JOB_TRANSCODE = 'transcode';
@@ -30,6 +31,7 @@ export class MediaPipelineService {
     private readonly transcodeQueue: Queue,
     private readonly moderationPolicy: ModerationPolicyService,
     private readonly s3Provider: S3Provider,
+    private readonly contentPublishService: ContentPublishService,
   ) {}
 
   async routeAfterUpload(mediaId: string): Promise<Media> {
@@ -42,6 +44,19 @@ export class MediaPipelineService {
     const exists = await this.s3Provider.objectExists(media.sourceIdOrKey);
     if (!exists) {
       throw new Error('Uploaded object not found in S3');
+    }
+
+    const contentLength = await this.s3Provider.getObjectContentLength(
+      media.sourceIdOrKey,
+    );
+    if (
+      contentLength !== null &&
+      media.size &&
+      Math.abs(contentLength - media.size) > 1024
+    ) {
+      this.logger.warn(
+        `S3 object size mismatch for ${mediaId}: declared ${media.size}, actual ${contentLength}`,
+      );
     }
 
     await this.mediaRepo.update(mediaId, { status: MediaStatus.UPLOADED });
@@ -58,6 +73,7 @@ export class MediaPipelineService {
         moderationStatus: ModerationStatus.SKIPPED,
       });
       await this.enqueueTranscode(mediaId);
+      await this.contentPublishService.onMediaTerminalUpdate(mediaId);
       this.logger.log(`Skipped moderation, enqueued transcode for ${mediaId}`);
     }
 
@@ -66,6 +82,15 @@ export class MediaPipelineService {
 
   async enqueueTranscode(mediaId: string): Promise<void> {
     await this.mediaRepo.update(mediaId, { status: MediaStatus.PROCESSING });
-    await this.transcodeQueue.add(MEDIA_JOB_TRANSCODE, { mediaId });
+    await this.transcodeQueue.add(
+      MEDIA_JOB_TRANSCODE,
+      { mediaId },
+      {
+        jobId: `transcode:${mediaId}`,
+        attempts: 1,
+        removeOnComplete: true,
+        removeOnFail: 50,
+      },
+    );
   }
 }

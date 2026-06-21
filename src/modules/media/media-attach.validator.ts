@@ -10,6 +10,7 @@ import { MediaStatus } from './enums/media-status.enum';
 import { MediaUploadFolder } from './enums/media-upload-folder.enum';
 import { ContentPublishStatus } from './enums/content-publish-status.enum';
 import { MediaStorageRegistry } from 'src/common/media/media-storage.registry';
+import { isModerationCleared } from './media-delivery.util';
 
 const PENDING_ATTACH_STATUSES = new Set<MediaStatus>([
   MediaStatus.UPLOADED,
@@ -50,10 +51,8 @@ export class MediaAttachValidator {
     if (allMedia.length === 0) {
       return ContentPublishStatus.PUBLISHED;
     }
-    const allReady = allMedia.every(
-      (media) => media.status === MediaStatus.READY,
-    );
-    return allReady
+    const allCleared = allMedia.every((media) => isModerationCleared(media));
+    return allCleared
       ? ContentPublishStatus.PUBLISHED
       : ContentPublishStatus.PENDING;
   }

@@ -4,6 +4,12 @@ import { In, Repository } from 'typeorm';
 import { Media } from './entities/media.entity';
 import { MediaStatus } from './enums/media-status.enum';
 import { ContentPublishStatus } from './enums/content-publish-status.enum';
+import {
+  isAwaitingModeration,
+  isModerationCleared,
+  isModerationFailed,
+  isModerationRejected,
+} from './media-delivery.util';
 import { Post } from '../posts/entities/post.entity';
 import { PostMedia } from '../posts/entities/post-media.entity';
 import { Ad } from '../ads/entities/ads.entity';
@@ -68,6 +74,59 @@ export class ContentPublishService {
     }
   }
 
+  async onMediaEnriched(mediaId: string): Promise<void> {
+    const postIds = await this.findPublishedPostIdsForMedia(mediaId);
+    const adIds = await this.findPublishedAdIdsForMedia(mediaId);
+    const statusIds = await this.findPublishedStatusIdsForMedia(mediaId);
+
+    for (const postId of postIds) {
+      await this.safeInvalidate(() =>
+        this.feedCacheInvalidation.invalidatePostAndPublicList(postId),
+      );
+    }
+    for (const adId of adIds) {
+      await this.safeInvalidate(() =>
+        this.feedCacheInvalidation.invalidateAdAndPublicList(adId),
+      );
+    }
+
+    const media = await this.mediaRepo.findOne({ where: { id: mediaId } });
+    if (!media?.ownerId) {
+      return;
+    }
+
+    this.wsGateway.emitToUser(media.ownerId, 'media.ready', {
+      success: true,
+      data: { mediaId, status: media.status },
+    });
+
+    for (const statusId of statusIds) {
+      const status = await this.statusRepo.findOne({ where: { id: statusId } });
+      if (status?.ownerId) {
+        this.wsGateway.emitToUser(status.ownerId, 'status.media.ready', {
+          success: true,
+          data: { statusId, mediaId },
+        });
+      }
+    }
+  }
+
+  async onTranscodeFailed(mediaId: string, errorMessage: string): Promise<void> {
+    const media = await this.mediaRepo.findOne({ where: { id: mediaId } });
+    if (!media?.ownerId) {
+      return;
+    }
+
+    this.wsGateway.emitToUser(media.ownerId, 'media.transcode_failed', {
+      success: true,
+      data: {
+        mediaId,
+        status: MediaStatus.PROCESSING,
+        message: errorMessage,
+      },
+    });
+  }
+
   private async findPendingPostIdsForMedia(mediaId: string): Promise<string[]> {
     const fromMedias = await this.postMediaRepo
       .createQueryBuilder('pm')
@@ -123,6 +182,67 @@ export class ContentPublishService {
       .where('status.mediaId = :mediaId', { mediaId })
       .andWhere('status.publishStatus = :pending', {
         pending: ContentPublishStatus.PENDING,
+      })
+      .getRawMany<{ id: string }>();
+
+    return rows.map((row) => row.id);
+  }
+
+  private async findPublishedPostIdsForMedia(mediaId: string): Promise<string[]> {
+    const fromMedias = await this.postMediaRepo
+      .createQueryBuilder('pm')
+      .innerJoin('pm.post', 'post')
+      .select('post.id', 'id')
+      .where('pm.mediaId = :mediaId', { mediaId })
+      .andWhere('post.publishStatus = :published', {
+        published: ContentPublishStatus.PUBLISHED,
+      })
+      .getRawMany<{ id: string }>();
+
+    const fromSound = await this.postRepo
+      .createQueryBuilder('post')
+      .select('post.id', 'id')
+      .where('post.sound_media_id = :mediaId', { mediaId })
+      .andWhere('post.publishStatus = :published', {
+        published: ContentPublishStatus.PUBLISHED,
+      })
+      .getRawMany<{ id: string }>();
+
+    return [...new Set([...fromMedias, ...fromSound].map((row) => row.id))];
+  }
+
+  private async findPublishedAdIdsForMedia(mediaId: string): Promise<string[]> {
+    const fromMedias = await this.adMediaRepo
+      .createQueryBuilder('am')
+      .innerJoin('am.ad', 'ad')
+      .select('ad.id', 'id')
+      .where('am.mediaId = :mediaId', { mediaId })
+      .andWhere('ad.publishStatus = :published', {
+        published: ContentPublishStatus.PUBLISHED,
+      })
+      .getRawMany<{ id: string }>();
+
+    const fromSound = await this.adRepo
+      .createQueryBuilder('ad')
+      .select('ad.id', 'id')
+      .where('ad.sound_media_id = :mediaId', { mediaId })
+      .andWhere('ad.publishStatus = :published', {
+        published: ContentPublishStatus.PUBLISHED,
+      })
+      .getRawMany<{ id: string }>();
+
+    return [...new Set([...fromMedias, ...fromSound].map((row) => row.id))];
+  }
+
+  private async findPublishedStatusIdsForMedia(
+    mediaId: string,
+  ): Promise<string[]> {
+    const rows = await this.statusRepo
+      .createQueryBuilder('status')
+      .select('status.id', 'id')
+      .where('status.mediaId = :mediaId', { mediaId })
+      .andWhere('status.publishStatus = :published', {
+        published: ContentPublishStatus.PUBLISHED,
       })
       .getRawMany<{ id: string }>();
 
@@ -260,13 +380,15 @@ export class ContentPublishService {
     if (
       linkedMedia.some(
         (media) =>
-          media.status === MediaStatus.REJECTED ||
-          media.status === MediaStatus.FAILED,
+          isModerationRejected(media) || isModerationFailed(media),
       )
     ) {
       return 'failed';
     }
-    if (linkedMedia.every((media) => media.status === MediaStatus.READY)) {
+    if (linkedMedia.some((media) => isAwaitingModeration(media))) {
+      return 'pending';
+    }
+    if (linkedMedia.every((media) => isModerationCleared(media))) {
       return 'published';
     }
     return 'pending';
@@ -275,8 +397,7 @@ export class ContentPublishService {
   private firstRejectionReason(linkedMedia: Media[]): string | undefined {
     const failed = linkedMedia.find(
       (media) =>
-        media.status === MediaStatus.REJECTED ||
-        media.status === MediaStatus.FAILED,
+        isModerationRejected(media) || isModerationFailed(media),
     );
     return failed?.rejectionReason ?? undefined;
   }
