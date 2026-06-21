@@ -72,6 +72,10 @@ export class MediaService {
         uploadFolder: dto.uploadFolder,
         mimeType: dto.mimeType,
         size: dto.size,
+        width: dto.width,
+        height: dto.height,
+        duration: dto.duration,
+        fileName: dto.fileName,
         status: MediaStatus.UPLOADING,
       });
       const saved = await this.mediaRepo.save(media);
@@ -152,6 +156,15 @@ export class MediaService {
     }
     if (dto.type === MediaType.AUDIO && !dto.mimeType.startsWith('audio/')) {
       throw new BadRequestException('Invalid audio mime type');
+    }
+
+    if (
+      (dto.type === MediaType.IMAGE || dto.type === MediaType.VIDEO) &&
+      (dto.width != null) !== (dto.height != null)
+    ) {
+      throw new BadRequestException(
+        'width and height must both be provided or omitted',
+      );
     }
   }
 }
