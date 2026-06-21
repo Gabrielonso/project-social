@@ -337,6 +337,14 @@ export class StatusService {
       const ids = await this.getFeedOwnerIds(viewerId);
       const now = new Date();
 
+      if (ids.length === 0) {
+        return successResponse('Operation successful', {
+          currentPage: page,
+          data: [] as StatusFeedGroup[],
+          totalPages: 1,
+        });
+      }
+
       const totalOwnersRaw = await this.statusRepo
         .createQueryBuilder('s')
         .where('s.ownerId IN (:...ids)', { ids })

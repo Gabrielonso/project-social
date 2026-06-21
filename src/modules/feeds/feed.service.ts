@@ -110,7 +110,10 @@ export class FeedService {
 
     return {
       ...withMedia,
-      owner: resolveUserDisplay(displayMap, entity.ownerId as string | undefined),
+      owner: resolveUserDisplay(
+        displayMap,
+        entity.ownerId as string | undefined,
+      ),
       tags,
     };
   }
@@ -640,7 +643,7 @@ export class FeedService {
           p.id,
           'post' AS type,
           p.created_at AS "createdAt",
-          NULL AS "repostedById"
+          NULL::uuid AS "repostedById"
         FROM posts p WHERE p.owner_id = $3
       )
       UNION ALL
@@ -649,7 +652,7 @@ export class FeedService {
           a.id,
           'ad' AS type,
           a.created_at AS "createdAt",
-          NULL AS "repostedById"
+          NULL::uuid AS "repostedById"
         FROM ads a WHERE a.owner_id = $3
       )
       UNION ALL
@@ -759,7 +762,7 @@ export class FeedService {
           p.id,
           'post' AS type,
           p.created_at AS "createdAt",
-          NULL AS "repostedById"
+          NULL::uuid AS "repostedById"
         FROM posts p
         WHERE p.owner_id = $3
           AND ($4::boolean = true OR (p.is_public = true AND p.publish_status = 'published'))
@@ -770,7 +773,7 @@ export class FeedService {
           a.id,
           'ad' AS type,
           a.created_at AS "createdAt",
-          NULL AS "repostedById"
+          NULL::uuid AS "repostedById"
         FROM ads a WHERE a.owner_id = $3
           AND ($4::boolean = true OR a.publish_status = 'published')
       )
