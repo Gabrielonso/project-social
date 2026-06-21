@@ -21,6 +21,7 @@ import { normalizeHashtags } from 'src/common/utils/hashtags.util';
 import { UpdateAdDto } from './dtos/update-ad.dto';
 import { FeedCacheInvalidationService } from '../feeds/feed-cache-invalidation.service';
 import { MediaAttachValidator } from '../media/media-attach.validator';
+import { ContentPublishStatus } from '../media/enums/content-publish-status.enum';
 
 @Injectable()
 export class AdService {
@@ -102,6 +103,51 @@ export class AdService {
             soundMedia = await mediaRepo.save(sound);
           }
 
+          let mediaEntities: Media[] = [];
+          if (dto.mediaIds?.length) {
+            mediaEntities =
+              await this.mediaAttachValidator.validateMediaIdsForAttachPending(
+                dto.mediaIds,
+                userId,
+                MediaUploadFolder.ADS,
+              );
+          }
+          //  else if (dto.media?.length) {
+          //   const created = dto.media.map((m) => {
+          //     if (
+          //       !m.sourceIdOrKey.startsWith(`${MediaUploadFolder.ADS}/${userId}/`)
+          //     ) {
+          //       throw new ForbiddenException('Invalid media ownership or folder');
+          //     }
+
+          //     return mediaRepo.create({
+          //       provider: m.provider,
+          //       type: m.type,
+          //       sourceIdOrKey: m.sourceIdOrKey,
+          //       width: m.width,
+          //       height: m.height,
+          //       duration: m.duration,
+          //       status: this.mediaAttachValidator.resolveLegacyStatus(
+          //         m.provider,
+          //         m.type,
+          //       ),
+          //       originalUrl: m.originalUrl,
+          //       streamUrl: m.streamUrl,
+          //       size: m.size,
+          //     });
+          //   });
+          //   mediaEntities = await mediaRepo.save(created);
+          // }
+          else {
+            throw new BadRequestException('Provide mediaIds or media');
+          }
+
+          const publishStatus =
+            this.mediaAttachValidator.resolveInitialPublishStatus(
+              mediaEntities,
+              soundMedia,
+            );
+
           const ad = adRepo.create({
             ownerId: user.id,
             content: dto.description,
@@ -113,45 +159,9 @@ export class AdService {
             topic: dto.topic,
             status: 'active',
             sound: soundMedia || undefined,
+            publishStatus,
           });
           const savedAd = await adRepo.save(ad);
-
-          let mediaEntities: Media[] = [];
-          if (dto.mediaIds?.length) {
-            mediaEntities =
-              await this.mediaAttachValidator.validateMediaIdsForAttach(
-                dto.mediaIds,
-                userId,
-                MediaUploadFolder.ADS,
-              );
-          } else if (dto.media?.length) {
-            const created = dto.media.map((m) => {
-              if (
-                !m.sourceIdOrKey.startsWith(`${MediaUploadFolder.ADS}/${userId}/`)
-              ) {
-                throw new ForbiddenException('Invalid media ownership or folder');
-              }
-
-              return mediaRepo.create({
-                provider: m.provider,
-                type: m.type,
-                sourceIdOrKey: m.sourceIdOrKey,
-                width: m.width,
-                height: m.height,
-                duration: m.duration,
-                status: this.mediaAttachValidator.resolveLegacyStatus(
-                  m.provider,
-                  m.type,
-                ),
-                originalUrl: m.originalUrl,
-                streamUrl: m.streamUrl,
-                size: m.size,
-              });
-            });
-            mediaEntities = await mediaRepo.save(created);
-          } else {
-            throw new BadRequestException('Provide mediaIds or media');
-          }
 
           const adMedias = mediaEntities.map((media, index) =>
             adMediaRepo.create({
@@ -177,12 +187,20 @@ export class AdService {
           //   new PostCreatedEvent(post.id, userId),
           // );
 
-          return successResponse('Successfully created ad');
+          return successResponse('Successfully created ad', {
+            adId: savedAd.id,
+            publishStatus: savedAd.publishStatus,
+          });
         },
       );
-      await this.safeInvalidateFeedCaches(() =>
-        this.feedCacheInvalidation.invalidatePublicFeedListCaches(),
-      );
+      if (
+        (result.data as { publishStatus?: ContentPublishStatus })
+          ?.publishStatus === ContentPublishStatus.PUBLISHED
+      ) {
+        await this.safeInvalidateFeedCaches(() =>
+          this.feedCacheInvalidation.invalidatePublicFeedListCaches(),
+        );
+      }
       return result;
     } catch (error) {
       throw error;

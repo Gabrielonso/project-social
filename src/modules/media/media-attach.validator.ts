@@ -8,7 +8,15 @@ import { In, Repository } from 'typeorm';
 import { Media } from './entities/media.entity';
 import { MediaStatus } from './enums/media-status.enum';
 import { MediaUploadFolder } from './enums/media-upload-folder.enum';
+import { ContentPublishStatus } from './enums/content-publish-status.enum';
 import { MediaStorageRegistry } from 'src/common/media/media-storage.registry';
+
+const PENDING_ATTACH_STATUSES = new Set<MediaStatus>([
+  MediaStatus.UPLOADED,
+  MediaStatus.MODERATING,
+  MediaStatus.PROCESSING,
+  MediaStatus.READY,
+]);
 
 @Injectable()
 export class MediaAttachValidator {
@@ -22,6 +30,46 @@ export class MediaAttachValidator {
     mediaIds: string[],
     userId: string,
     expectedFolder: MediaUploadFolder,
+  ): Promise<Media[]> {
+    return this.validateMediaIds(mediaIds, userId, expectedFolder, 'strict');
+  }
+
+  async validateMediaIdsForAttachPending(
+    mediaIds: string[],
+    userId: string,
+    expectedFolder: MediaUploadFolder,
+  ): Promise<Media[]> {
+    return this.validateMediaIds(mediaIds, userId, expectedFolder, 'pending');
+  }
+
+  resolveInitialPublishStatus(
+    mediaList: Media[],
+    sound?: Media | null,
+  ): ContentPublishStatus {
+    const allMedia = sound ? [...mediaList, sound] : mediaList;
+    if (allMedia.length === 0) {
+      return ContentPublishStatus.PUBLISHED;
+    }
+    const allReady = allMedia.every(
+      (media) => media.status === MediaStatus.READY,
+    );
+    return allReady
+      ? ContentPublishStatus.PUBLISHED
+      : ContentPublishStatus.PENDING;
+  }
+
+  resolveLegacyStatus(
+    provider: Media['provider'],
+    type: Media['type'],
+  ): MediaStatus {
+    return this.storageRegistry.get(provider).resolveInitialStatus(type);
+  }
+
+  private async validateMediaIds(
+    mediaIds: string[],
+    userId: string,
+    expectedFolder: MediaUploadFolder,
+    mode: 'strict' | 'pending',
   ): Promise<Media[]> {
     if (!mediaIds.length) {
       return [];
@@ -52,20 +100,19 @@ export class MediaAttachValidator {
         );
       }
 
-      if (media.status !== MediaStatus.READY) {
+      if (mode === 'strict') {
+        if (media.status !== MediaStatus.READY) {
+          throw new ForbiddenException(
+            `Media ${media.id} is not ready (status: ${media.status})`,
+          );
+        }
+      } else if (!PENDING_ATTACH_STATUSES.has(media.status)) {
         throw new ForbiddenException(
-          `Media ${media.id} is not ready (status: ${media.status})`,
+          `Media ${media.id} cannot be attached yet (status: ${media.status})`,
         );
       }
     }
 
     return mediaIds.map((id) => mediaList.find((media) => media.id === id)!);
-  }
-
-  resolveLegacyStatus(
-    provider: Media['provider'],
-    type: Media['type'],
-  ): MediaStatus {
-    return this.storageRegistry.get(provider).resolveInitialStatus(type);
   }
 }

@@ -28,6 +28,7 @@ import { NotificationDispatcher } from '../notification/notification.dispatcher'
 import { TagDto } from '../engagements/dtos/tag.dto';
 import { FeedCacheInvalidationService } from '../feeds/feed-cache-invalidation.service';
 import { MediaAttachValidator } from '../media/media-attach.validator';
+import { ContentPublishStatus } from '../media/enums/content-publish-status.enum';
 
 @Injectable()
 export class PostService {
@@ -146,6 +147,55 @@ export class PostService {
             soundMedia = await mediaRepo.save(sound);
           }
 
+          let mediaEntities: Media[] = [];
+          if (dto.mediaIds?.length) {
+            mediaEntities =
+              await this.mediaAttachValidator.validateMediaIdsForAttachPending(
+                dto.mediaIds,
+                userId,
+                MediaUploadFolder.POSTS,
+              );
+          }
+          // else if (dto.media?.length) {
+          //   const created = dto.media.map((m) => {
+          //     if (
+          //       !m.sourceIdOrKey.startsWith(
+          //         `${MediaUploadFolder.POSTS}/${userId}/`,
+          //       )
+          //     ) {
+          //       throw new ForbiddenException(
+          //         'Invalid media ownership or folder',
+          //       );
+          //     }
+
+          //     return mediaRepo.create({
+          //       provider: m.provider,
+          //       type: m.type,
+          //       sourceIdOrKey: m.sourceIdOrKey,
+          //       width: m.width,
+          //       height: m.height,
+          //       duration: m.duration,
+          //       status: this.mediaAttachValidator.resolveLegacyStatus(
+          //         m.provider,
+          //         m.type,
+          //       ),
+          //       originalUrl: m.originalUrl,
+          //       streamUrl: m.streamUrl,
+          //       size: m.size,
+          //     });
+          //   });
+          //   mediaEntities = await mediaRepo.save(created);
+          // }
+          else {
+            throw new BadRequestException('Provide mediaIds or media');
+          }
+
+          const publishStatus =
+            this.mediaAttachValidator.resolveInitialPublishStatus(
+              mediaEntities,
+              soundMedia,
+            );
+
           const post = postRepo.create({
             content: dto.caption,
             hashtags: normalizeHashtags(dto.hashtags),
@@ -154,49 +204,9 @@ export class PostService {
             allowComments: dto.allowComments ?? true,
             isPublic: dto.isPublic ?? true,
             location: dto.location,
+            publishStatus,
           });
           const savedPost = await postRepo.save(post);
-
-          let mediaEntities: Media[] = [];
-          if (dto.mediaIds?.length) {
-            mediaEntities =
-              await this.mediaAttachValidator.validateMediaIdsForAttach(
-                dto.mediaIds,
-                userId,
-                MediaUploadFolder.POSTS,
-              );
-          } else if (dto.media?.length) {
-            const created = dto.media.map((m) => {
-              if (
-                !m.sourceIdOrKey.startsWith(
-                  `${MediaUploadFolder.POSTS}/${userId}/`,
-                )
-              ) {
-                throw new ForbiddenException(
-                  'Invalid media ownership or folder',
-                );
-              }
-
-              return mediaRepo.create({
-                provider: m.provider,
-                type: m.type,
-                sourceIdOrKey: m.sourceIdOrKey,
-                width: m.width,
-                height: m.height,
-                duration: m.duration,
-                status: this.mediaAttachValidator.resolveLegacyStatus(
-                  m.provider,
-                  m.type,
-                ),
-                originalUrl: m.originalUrl,
-                streamUrl: m.streamUrl,
-                size: m.size,
-              });
-            });
-            mediaEntities = await mediaRepo.save(created);
-          } else {
-            throw new BadRequestException('Provide mediaIds or media');
-          }
 
           const postMedias = mediaEntities.map((media, index) =>
             postMediaRepo.create({
@@ -232,12 +242,14 @@ export class PostService {
 
             await tagRepo.save(tagEntities);
 
-            await this.notifyPostTags(
-              userId,
-              user.username,
-              savedPost.id,
-              dto.tags,
-            );
+            if (publishStatus === ContentPublishStatus.PUBLISHED) {
+              await this.notifyPostTags(
+                userId,
+                user.username,
+                savedPost.id,
+                dto.tags,
+              );
+            }
           }
 
           // enqueue processing ONLY for S3 videos
@@ -264,12 +276,20 @@ export class PostService {
             },
           });
 
-          return successResponse('Successfully created post');
+          return successResponse('Successfully created post', {
+            postId: savedPost.id,
+            publishStatus: savedPost.publishStatus,
+          });
         },
       );
-      await this.safeInvalidateFeedCaches(() =>
-        this.feedCacheInvalidation.invalidatePublicFeedListCaches(),
-      );
+      if (
+        (result.data as { publishStatus?: ContentPublishStatus })
+          ?.publishStatus === ContentPublishStatus.PUBLISHED
+      ) {
+        await this.safeInvalidateFeedCaches(() =>
+          this.feedCacheInvalidation.invalidatePublicFeedListCaches(),
+        );
+      }
       return result;
     } catch (error) {
       throw error;

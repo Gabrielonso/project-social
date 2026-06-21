@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Media } from 'src/modules/media/entities/media.entity';
+import { ContentPublishStatus } from 'src/modules/media/enums/content-publish-status.enum';
 import { StatusType } from '../enums/status-type.enum';
 
 @Entity('statuses')
@@ -25,6 +26,14 @@ export class Status {
 
   @Column({ type: 'text', nullable: true })
   content?: string;
+
+  @Column({
+    name: 'publish_status',
+    type: 'enum',
+    enum: ContentPublishStatus,
+    default: ContentPublishStatus.PUBLISHED,
+  })
+  publishStatus: ContentPublishStatus;
 
   @ManyToOne(() => Media, {
     onDelete: 'SET NULL',

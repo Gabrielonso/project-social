@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Post,
   Req,
@@ -41,6 +43,13 @@ export class MediaController {
   @ApiOperation({ summary: 'Poll upload / processing status' })
   getUploadStatus(@Req() req, @Param('id') id: string) {
     return this.mediaService.getUploadStatus(req.user.id, id);
+  }
+
+  @Delete('uploads/:id')
+  @HttpCode(202)
+  @ApiOperation({ summary: 'Cancel draft upload (async cleanup)' })
+  cancelUpload(@Req() req, @Param('id') id: string) {
+    return this.mediaService.requestCancelUpload(req.user.id, id);
   }
 
   @Post('upload-credentials')

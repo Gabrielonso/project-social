@@ -5,6 +5,7 @@ import { NotificationEventType } from 'src/modules/notification/interfaces/notif
 import { Repost } from '../entities/repost.entity';
 import { FeedType } from 'src/modules/feeds/enums/feed-type.enum';
 import { Post } from 'src/modules/posts/entities/post.entity';
+import { ContentPublishStatus } from 'src/modules/media/enums/content-publish-status.enum';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { NotificationDispatcher } from 'src/modules/notification/notification.dispatcher';
 import { User } from 'src/modules/user/entity/user.entity';
@@ -24,6 +25,9 @@ export class RepostsService {
     return this.dataSource.transaction(async (manager) => {
       const post = await manager.findOne(Post, { where: { id: postId } });
       if (!post) {
+        throw new NotFoundException('Post not found');
+      }
+      if (post.publishStatus !== ContentPublishStatus.PUBLISHED) {
         throw new NotFoundException('Post not found');
       }
 

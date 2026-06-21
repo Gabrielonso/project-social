@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { FeedService } from './feed.service';
 import { FeedController } from './feed.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,7 +11,7 @@ import { MediaModule } from '../media/media.module';
 @Module({
   providers: [FeedService, FeedCacheInvalidationService],
   controllers: [FeedController],
-  imports: [TypeOrmModule.forFeature([Post, Ad]), UserDisplayModule, MediaModule],
+  imports: [TypeOrmModule.forFeature([Post, Ad]), UserDisplayModule, forwardRef(() => MediaModule)],
   exports: [FeedService, FeedCacheInvalidationService],
 })
 export class FeedModule {}

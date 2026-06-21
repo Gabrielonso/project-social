@@ -145,46 +145,47 @@ export class ChatsService {
               }),
             );
             attachments = await messageAttachmentRepo.save(messageAttachments);
-          } else if (data.attachments?.length) {
-            const created = data.attachments.map((m) => {
-              if (
-                !m.sourceIdOrKey.startsWith(
-                  `${MediaUploadFolder.MESSAGES}/${data.userId}/`,
-                )
-              ) {
-                throw new ForbiddenException(
-                  'Invalid media ownership or folder',
-                );
-              }
-
-              return mediaRepo.create({
-                provider: m.provider,
-                type: m.type,
-                sourceIdOrKey: m.sourceIdOrKey,
-                width: m.width,
-                height: m.height,
-                duration: m.duration,
-                status: this.mediaAttachValidator.resolveLegacyStatus(
-                  m.provider,
-                  m.type,
-                ),
-                originalUrl: m.originalUrl,
-                streamUrl: m.streamUrl,
-                size: m.size,
-                fileName: m.fileName,
-              });
-            });
-            const savedMedia = await mediaRepo.save(created);
-            const messageAttachments = savedMedia.map((attachment, index) =>
-              messageAttachmentRepo.create({
-                position: index,
-                message,
-                attachment,
-                messageId: message.id,
-              }),
-            );
-            attachments = await messageAttachmentRepo.save(messageAttachments);
           }
+          //  else if (data.attachments?.length) {
+          //   const created = data.attachments.map((m) => {
+          //     if (
+          //       !m.sourceIdOrKey.startsWith(
+          //         `${MediaUploadFolder.MESSAGES}/${data.userId}/`,
+          //       )
+          //     ) {
+          //       throw new ForbiddenException(
+          //         'Invalid media ownership or folder',
+          //       );
+          //     }
+
+          //     return mediaRepo.create({
+          //       provider: m.provider,
+          //       type: m.type,
+          //       sourceIdOrKey: m.sourceIdOrKey,
+          //       width: m.width,
+          //       height: m.height,
+          //       duration: m.duration,
+          //       status: this.mediaAttachValidator.resolveLegacyStatus(
+          //         m.provider,
+          //         m.type,
+          //       ),
+          //       originalUrl: m.originalUrl,
+          //       streamUrl: m.streamUrl,
+          //       size: m.size,
+          //       fileName: m.fileName,
+          //     });
+          //   });
+          //   const savedMedia = await mediaRepo.save(created);
+          //   const messageAttachments = savedMedia.map((attachment, index) =>
+          //     messageAttachmentRepo.create({
+          //       position: index,
+          //       message,
+          //       attachment,
+          //       messageId: message.id,
+          //     }),
+          //   );
+          //   attachments = await messageAttachmentRepo.save(messageAttachments);
+          // }
 
           return { ...message, attachments };
         },

@@ -13,6 +13,7 @@ import { FeedType } from 'src/modules/feeds/enums/feed-type.enum';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { successResponse } from 'src/common/helpers/response.helper';
 import { Post } from 'src/modules/posts/entities/post.entity';
+import { ContentPublishStatus } from 'src/modules/media/enums/content-publish-status.enum';
 import { User } from 'src/modules/user/entity/user.entity';
 import { NotificationDispatcher } from 'src/modules/notification/notification.dispatcher';
 import { NotificationEventType } from 'src/modules/notification/interfaces/notification-event.types';
@@ -342,14 +343,14 @@ export class CommentsService {
   ) {
     if (entity === FeedType.POST) {
       const post = await manager.findOne(Post, { where: { id: entityId } });
-      if (!post) {
+      if (!post || post.publishStatus !== ContentPublishStatus.PUBLISHED) {
         throw new NotFoundException('Post not found');
       }
     }
 
     if (entity === FeedType.AD) {
       const ad = await manager.findOne(Ad, { where: { id: entityId } });
-      if (!ad) {
+      if (!ad || ad.publishStatus !== ContentPublishStatus.PUBLISHED) {
         throw new NotFoundException('Ad not found');
       }
     }

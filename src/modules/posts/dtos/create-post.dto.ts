@@ -124,15 +124,15 @@ export class CreatePostDto {
   @IsOptional()
   mediaIds?: string[];
 
-  @ApiPropertyOptional({
-    description: 'Media files data (legacy Cloudinary flow)',
-    type: [MediaDto],
-  })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => MediaDto)
-  @IsOptional()
-  media?: MediaDto[];
+  // @ApiPropertyOptional({
+  //   description: 'Media files data (legacy Cloudinary flow)',
+  //   type: [MediaDto],
+  // })
+  // @IsArray()
+  // @ValidateNested({ each: true })
+  // @Type(() => MediaDto)
+  // @IsOptional()
+  // media?: MediaDto[];
 
   @ApiPropertyOptional({
     description: 'Allow Comments for this post',

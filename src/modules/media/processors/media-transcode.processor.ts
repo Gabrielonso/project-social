@@ -13,6 +13,7 @@ import { Media } from '../entities/media.entity';
 import { MediaStatus } from '../enums/media-status.enum';
 import { MediaType } from '../enums/media-type.enum';
 import { MediaProvider } from '../enums/media-provider.enum';
+import { ContentPublishService } from '../content-publish.service';
 import { getS3Bucket, getS3Client } from 'src/common/s3/s3.client';
 import { S3Provider } from 'src/common/s3/s3.provider';
 
@@ -26,6 +27,7 @@ export class MediaTranscodeProcessor extends WorkerHost {
     @InjectRepository(Media)
     private readonly mediaRepo: Repository<Media>,
     private readonly s3Provider: S3Provider,
+    private readonly contentPublishService: ContentPublishService,
   ) {
     super();
   }
@@ -35,9 +37,13 @@ export class MediaTranscodeProcessor extends WorkerHost {
       return;
     }
 
-    const media = await this.mediaRepo.findOneByOrFail({
-      id: job.data.mediaId,
+    const media = await this.mediaRepo.findOne({
+      where: { id: job.data.mediaId },
     });
+
+    if (!media) {
+      return;
+    }
 
     if (media.provider !== MediaProvider.S3) {
       return;
@@ -52,12 +58,21 @@ export class MediaTranscodeProcessor extends WorkerHost {
         await this.processPassthrough(media);
       }
 
+      const stillExists = await this.mediaRepo.findOne({
+        where: { id: media.id },
+      });
+      if (!stillExists) {
+        return;
+      }
+
       await this.mediaRepo.update(media.id, { status: MediaStatus.READY });
+      await this.contentPublishService.onMediaTerminalUpdate(media.id);
     } catch (error) {
       this.logger.error(
         `Transcode failed for ${media.id}: ${error instanceof Error ? error.message : String(error)}`,
       );
       await this.mediaRepo.update(media.id, { status: MediaStatus.FAILED });
+      await this.contentPublishService.onMediaTerminalUpdate(media.id);
       throw error;
     }
   }

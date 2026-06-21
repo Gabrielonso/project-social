@@ -26,15 +26,15 @@ export class CreateMessageDto {
   @IsOptional()
   attachmentMediaIds?: string[];
 
-  @ApiPropertyOptional({
-    description: 'Media files data (legacy Cloudinary flow)',
-    type: [MediaDto],
-  })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => MediaDto)
-  @IsOptional()
-  attachments?: MediaDto[];
+  // @ApiPropertyOptional({
+  //   description: 'Media files data (legacy Cloudinary flow)',
+  //   type: [MediaDto],
+  // })
+  // @IsArray()
+  // @ValidateNested({ each: true })
+  // @Type(() => MediaDto)
+  // @IsOptional()
+  // attachments?: MediaDto[];
 
   @ApiPropertyOptional({
     description: 'Text message',

@@ -141,6 +141,36 @@ export class WsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @UseGuards(WsAuthGuard)
+  @SubscribeMessage('media.cancel_upload')
+  cancelUpload(
+    @MessageBody() payload: { mediaId?: string },
+    @CurrentUser() user: Auth,
+    @Ack() ack: (response: any) => void,
+  ) {
+    try {
+      if (!payload?.mediaId) {
+        return ack(
+          wsFailure(
+            'media.cancel_upload_ack',
+            'INVALID',
+            'mediaId is required',
+          ),
+        );
+      }
+
+      this.touchPresence(user.id);
+      this.eventBus.emit('media.cancel_upload', {
+        mediaId: payload.mediaId,
+        userId: user.id,
+      });
+      ack(wsSuccess('media.cancel_upload_ack', { mediaId: payload.mediaId }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'UNKNOWN_ERROR';
+      ack(wsFailure('media.cancel_upload_ack', 'CANCEL_FAILED', message));
+    }
+  }
+
+  @UseGuards(WsAuthGuard)
   @SubscribeMessage('chat.edit_message')
   editMessage(
     @MessageBody() payload: EditMessageDto,

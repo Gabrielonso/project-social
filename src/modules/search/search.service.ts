@@ -196,6 +196,7 @@ export class SearchService {
           p.created_at AS "createdAt"
         FROM posts p
         WHERE p.is_public = true
+          AND p.publish_status = 'published'
           AND (
             p.content ILIKE $1
             OR p.location ILIKE $1
@@ -213,7 +214,8 @@ export class SearchService {
           'ad' AS type,
           a.created_at AS "createdAt"
         FROM ads a
-        WHERE (
+        WHERE a.publish_status = 'published'
+          AND (
             a.content ILIKE $1
             OR EXISTS (
               SELECT 1 FROM unnest(COALESCE(a.hashtags, ARRAY[]::text[])) AS tag
@@ -243,6 +245,7 @@ export class SearchService {
       `SELECT COUNT(*)::int AS count FROM (
         SELECT p.id FROM posts p
         WHERE p.is_public = true
+          AND p.publish_status = 'published'
           AND (
             p.content ILIKE $1
             OR p.location ILIKE $1
@@ -254,7 +257,8 @@ export class SearchService {
           ${countPostBlock}
         UNION ALL
         SELECT a.id FROM ads a
-        WHERE (
+        WHERE a.publish_status = 'published'
+          AND (
             a.content ILIKE $1
             OR EXISTS (
               SELECT 1 FROM unnest(COALESCE(a.hashtags, ARRAY[]::text[])) AS tag
@@ -298,9 +302,11 @@ export class SearchService {
         SELECT unnest(COALESCE(p.hashtags, ARRAY[]::text[])) AS tag, p.created_at AS created_at
         FROM posts p
         WHERE p.is_public = true
+          AND p.publish_status = 'published'
         UNION ALL
         SELECT unnest(COALESCE(a.hashtags, ARRAY[]::text[])) AS tag, a.created_at AS created_at
         FROM ads a
+        WHERE a.publish_status = 'published'
       )
       SELECT
         tag,
@@ -321,9 +327,11 @@ export class SearchService {
         SELECT unnest(COALESCE(p.hashtags, ARRAY[]::text[])) AS tag
         FROM posts p
         WHERE p.is_public = true
+          AND p.publish_status = 'published'
         UNION ALL
         SELECT unnest(COALESCE(a.hashtags, ARRAY[]::text[])) AS tag
         FROM ads a
+        WHERE a.publish_status = 'published'
       )
       SELECT COUNT(DISTINCT tag)::int AS count
       FROM tags
