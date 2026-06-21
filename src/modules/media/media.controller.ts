@@ -9,12 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateUploadDto } from './dtos/create-upload.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { MediaService } from './media.service';

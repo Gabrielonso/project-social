@@ -32,8 +32,7 @@ export class MediaUrlResolver {
     const playback = this.resolve(media);
     const width = Number(media.width) || undefined;
     const height = Number(media.height) || undefined;
-    const aspectRatio =
-      width && height && height > 0 ? width / height : null;
+    const aspectRatio = width && height && height > 0 ? width / height : null;
 
     return {
       id: media.id,
