@@ -24,8 +24,13 @@ import { resolveUserDisplay } from '../user/helpers/user-display.helper';
 import { MediaAttachValidator } from '../media/media-attach.validator';
 import { ContentPublishService } from '../media/content-publish.service';
 import { ContentPublishStatus } from '../media/enums/content-publish-status.enum';
+import {
+  MediaPlaybackPayload,
+  MediaUrlResolver,
+} from 'src/common/media/media-url.resolver';
 
-export type StatusWithViewMeta = Status & {
+export type StatusWithViewMeta = Omit<Status, 'media'> & {
+  media?: MediaPlaybackPayload | null;
   viewedByMe: boolean;
   viewCount?: number;
   owner: UserDisplayDto;
@@ -52,6 +57,7 @@ export class StatusService {
     private readonly userDisplayService: UserDisplayService,
     private readonly mediaAttachValidator: MediaAttachValidator,
     private readonly contentPublishService: ContentPublishService,
+    private readonly mediaUrlResolver: MediaUrlResolver,
   ) {}
 
   private getExpiryDate(hours = 24) {
@@ -162,17 +168,37 @@ export class StatusService {
     return map;
   }
 
+  private enrichStatusMedia(
+    status: Status,
+    viewerId?: string,
+  ): MediaPlaybackPayload | null | undefined {
+    const media = status.media;
+    if (!media) {
+      return media ?? undefined;
+    }
+
+    const isOwner = !!viewerId && viewerId === status.ownerId;
+    const visible = isOwner
+      ? this.mediaUrlResolver.hasPlayback(media)
+      : this.mediaUrlResolver.isPubliclyVisible(media);
+
+    return visible ? this.mediaUrlResolver.toPlaybackPayload(media) : null;
+  }
+
   private enrichStatuses(
     statuses: Status[],
     viewedSet: Set<string>,
     ownerDisplay: UserDisplayDto,
-    viewCounts?: Map<string, number>,
+    options?: { viewerId?: string; viewCounts?: Map<string, number> },
   ): StatusWithViewMeta[] {
     return statuses.map((status) => ({
       ...status,
+      media: this.enrichStatusMedia(status, options?.viewerId),
       owner: ownerDisplay,
       viewedByMe: viewedSet.has(status.id),
-      ...(viewCounts && { viewCount: viewCounts.get(status.id) ?? 0 }),
+      ...(options?.viewCounts && {
+        viewCount: options.viewCounts.get(status.id) ?? 0,
+      }),
     }));
   }
 
@@ -312,10 +338,14 @@ export class StatusService {
         viewerId === ownerId
           ? await this.getViewCounts(active.map((s) => s.id))
           : undefined;
-      data = this.enrichStatuses(active, viewedSet, ownerDisplay, viewCounts);
+      data = this.enrichStatuses(active, viewedSet, ownerDisplay, {
+        viewerId,
+        viewCounts,
+      });
     } else {
       data = active.map((status) => ({
         ...status,
+        media: this.enrichStatusMedia(status),
         owner: ownerDisplay,
         viewedByMe: false,
       }));
@@ -417,7 +447,7 @@ export class StatusService {
           ownerId: uid,
           owner,
           hasUnseenStatuses: unseenOwners.has(uid),
-          statuses: this.enrichStatuses(list, viewedSet, owner),
+          statuses: this.enrichStatuses(list, viewedSet, owner, { viewerId }),
         };
       });
 
