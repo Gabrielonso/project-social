@@ -655,15 +655,6 @@ export class FeedService {
           NULL::uuid AS "repostedById"
         FROM ads a WHERE a.owner_id = $3
       )
-      UNION ALL
-      (
-        SELECT
-          r.post_id AS id,
-          'repost' AS type,
-          r.created_at AS "createdAt",
-          r.user_id AS "repostedById"
-        FROM reposts r WHERE r.user_id = $3
-      )
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
       `,
@@ -675,8 +666,6 @@ export class FeedService {
   SELECT id FROM posts WHERE owner_id = $1
   UNION ALL
   SELECT id FROM ads WHERE owner_id = $1
-  UNION ALL
-  SELECT post_id AS id FROM reposts WHERE user_id = $1
 ) t`,
       [userId],
     );
@@ -696,7 +685,8 @@ export class FeedService {
         SELECT
           l.entity_id AS id,
           l.entity::text AS type,
-          l.created_at AS "createdAt"
+          l.created_at AS "createdAt",
+          NULL::uuid AS "repostedById"
         FROM likes l
         WHERE l.user_id = $3
           AND l.entity IN ('post', 'ad')
@@ -706,10 +696,21 @@ export class FeedService {
         SELECT
           b.entity_id AS id,
           b.entity::text AS type,
-          b.created_at AS "createdAt"
+          b.created_at AS "createdAt",
+          NULL::uuid AS "repostedById"
         FROM bookmarks b
         WHERE b.user_id = $3
           AND b.entity IN ('post', 'ad')
+      )
+      UNION ALL
+      (
+        SELECT
+          r.post_id AS id,
+          'repost' AS type,
+          r.created_at AS "createdAt",
+          r.user_id AS "repostedById"
+        FROM reposts r
+        WHERE r.user_id = $3
       )
       ORDER BY "createdAt" DESC
       LIMIT $1 OFFSET $2
@@ -736,6 +737,15 @@ export class FeedService {
         FROM bookmarks b
         WHERE b.user_id = $1
           AND b.entity IN ('post', 'ad')
+      )
+      UNION ALL
+      (
+        SELECT
+          r.post_id AS id,
+          'repost' AS type,
+          r.created_at AS "createdAt"
+        FROM reposts r
+        WHERE r.user_id = $1
       )
       ) t`,
       [userId],
