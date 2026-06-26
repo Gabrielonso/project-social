@@ -33,7 +33,7 @@ export const awsConfig = {
     ) as MediaUploadFolder[],
     rejectLabels: parseList(
       process.env.REKOGNITION_REJECT_LABELS,
-      'Explicit Nudity,Suggestive',
+      'Exposed Female Nipple,Exposed Male Genitalia,Exposed Female Genitalia,Explicit Sexual Activity,Sex Toys',
     ),
   },
 };

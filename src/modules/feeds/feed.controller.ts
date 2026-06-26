@@ -34,7 +34,8 @@ export class FeedController {
   @ApiBearerAuth()
   @Get('presence')
   @ApiOperation({
-    summary: 'Get posts and ads liked or bookmarked by the authenticated user',
+    summary:
+      'Get posts and ads liked, bookmarked, or reposted by the authenticated user',
   })
   async getPresence(@Query() feedFilterDto: FeedFilterDto, @Req() req) {
     const userId: string = req.user.id;
