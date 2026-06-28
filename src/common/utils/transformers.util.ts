@@ -35,5 +35,10 @@ export const TransformToLowercase = ({ value }: TransformFnParams) => {
   return (value as string).trim().toLowerCase();
 };
 
+export const TransformUsernameToLowercase = ({ value }: TransformFnParams) => {
+  if (typeof value !== 'string') return value;
+  return value.trim().toLowerCase();
+};
+
 export const CapitalizeFirstLetter = (str: string): string =>
   str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();

@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { randomInt } from 'crypto';
+import { normalizeUsername } from 'src/common/utils/utilityFunctions';
 import {
   UserAudienceAccessOptions,
   UserCreateOptions,
@@ -49,7 +50,16 @@ export class User {
   @Column({ name: 'last_name', type: 'text', nullable: true })
   lastName: string;
 
-  @Column({ type: 'text', unique: true, nullable: true })
+  @Column({
+    type: 'text',
+    unique: true,
+    nullable: true,
+    transformer: {
+      to: (value: string | null) =>
+        value != null ? normalizeUsername(value)! : value,
+      from: (value: string | null) => value,
+    },
+  })
   username: string;
 
   @Column({ name: 'bio', type: 'text', nullable: true })

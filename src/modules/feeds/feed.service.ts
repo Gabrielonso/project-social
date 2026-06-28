@@ -108,9 +108,21 @@ export class FeedService {
     await this.redis.set(key, JSON.stringify(value), 'EX', ttlSeconds);
   }
 
+  private isFeedMediaVisible(
+    media: Media,
+    viewerId: string | undefined,
+    ownerId: string | undefined,
+  ): boolean {
+    const isOwner = !!viewerId && !!ownerId && viewerId === ownerId;
+    return isOwner
+      ? this.mediaUrlResolver.hasPlayback(media)
+      : this.mediaUrlResolver.isPubliclyVisible(media);
+  }
+
   private enrichFeedEntity<T extends CachedBaseEntity>(
     entity: T,
     displayMap: Map<string, UserDisplay>,
+    viewerId?: string,
   ) {
     const base = stripLegacyOwnerFields(entity as Record<string, unknown>);
     const tags = ((entity.tags as TagDto[] | undefined) ?? []).map((tag) => {
@@ -121,7 +133,7 @@ export class FeedService {
       };
     });
 
-    const withMedia = this.enrichFeedMedia(base as T);
+    const withMedia = this.enrichFeedMedia(base as T, viewerId);
 
     return {
       ...withMedia,
@@ -133,14 +145,19 @@ export class FeedService {
     };
   }
 
-  private enrichFeedMedia<T extends CachedBaseEntity>(entity: T): T {
+  private enrichFeedMedia<T extends CachedBaseEntity>(
+    entity: T,
+    viewerId?: string,
+  ): T {
+    const ownerId = entity.ownerId as string | undefined;
     const medias = (entity as { medias?: PostMedia[] }).medias;
     const sound = (entity as { sound?: Media }).sound;
 
     const enrichedMedias = medias
       ?.filter(
         (item) =>
-          item.media && this.mediaUrlResolver.isPubliclyVisible(item.media),
+          item.media &&
+          this.isFeedMediaVisible(item.media, viewerId, ownerId),
       )
       .map((item) => ({
         ...item,
@@ -148,7 +165,7 @@ export class FeedService {
       }));
 
     const enrichedSound =
-      sound && this.mediaUrlResolver.isPubliclyVisible(sound)
+      sound && this.isFeedMediaVisible(sound, viewerId, ownerId)
         ? this.mediaUrlResolver.toPlaybackPayload(sound)
         : null;
 
@@ -760,7 +777,7 @@ export class FeedService {
       posts.map((p) => [
         p.id,
         {
-          ...this.enrichFeedEntity(p, displayMap),
+          ...this.enrichFeedEntity(p, displayMap, viewerId),
           viewerHasLiked: likedSet.has(`${FeedType.POST}:${p.id}`),
           viewerHasBookmarked: bookmarkedSet.has(`${FeedType.POST}:${p.id}`),
           viewerHasReposted: viewerId ? repostedSet.has(p.id) : false,
@@ -780,7 +797,7 @@ export class FeedService {
       ads.map((a) => [
         a.id,
         {
-          ...this.enrichFeedEntity(a, displayMap),
+          ...this.enrichFeedEntity(a, displayMap, viewerId),
           viewerHasLiked: likedSet.has(`${FeedType.AD}:${a.id}`),
           viewerHasBookmarked: bookmarkedSet.has(`${FeedType.AD}:${a.id}`),
           viewerHasReposted: false,
