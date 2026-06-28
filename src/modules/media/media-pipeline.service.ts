@@ -59,7 +59,11 @@ export class MediaPipelineService {
       );
     }
 
-    await this.mediaRepo.update(mediaId, { status: MediaStatus.UPLOADED });
+    const originalUrl = this.s3Provider.getPublicUrl(media.sourceIdOrKey);
+    await this.mediaRepo.update(mediaId, {
+      status: MediaStatus.UPLOADED,
+      originalUrl,
+    });
 
     if (this.moderationPolicy.shouldModerate(media)) {
       await this.mediaRepo.update(mediaId, {

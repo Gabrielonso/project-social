@@ -85,6 +85,7 @@ export class MediaService {
         provider: MediaProvider.S3,
         uploadUrl: credentials.data.uploadUrl,
         key,
+        publicUrl: credentials.data.publicUrl,
         expiresIn: credentials.data.expiresIn,
       });
     } catch (error) {
@@ -143,8 +144,19 @@ export class MediaService {
       rejectionReason: media.rejectionReason,
       provider: media.provider,
       type: media.type,
+      originalUrl: this.resolveOriginalUrl(media),
       playback,
     };
+  }
+
+  private resolveOriginalUrl(media: Media): string | null {
+    if (media.originalUrl) {
+      return media.originalUrl;
+    }
+    if (!media.sourceIdOrKey || !this.urlResolver.hasPlayback(media)) {
+      return null;
+    }
+    return this.urlResolver.resolve(media).original ?? null;
   }
 
   private validateUploadDto(dto: CreateUploadDto) {
