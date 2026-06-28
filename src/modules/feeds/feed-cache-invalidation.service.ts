@@ -4,6 +4,7 @@ import { REDIS_CLIENT } from 'src/common/redis/redis.constants';
 import { FeedType } from './enums/feed-type.enum';
 import {
   PUBLIC_FEED_LIST_CACHE_PREFIX,
+  RANKED_FEED_LIST_CACHE_PREFIX,
   feedBaseKey,
   feedTagsKey,
 } from './feed-cache.keys';
@@ -36,7 +37,12 @@ export class FeedCacheInvalidationService {
    * Drop all short-lived full-page public feed responses so list order / visibility updates quickly.
    */
   async invalidatePublicFeedListCaches(): Promise<void> {
-    const pattern = `${PUBLIC_FEED_LIST_CACHE_PREFIX}*`;
+    await this.invalidateByPrefix(PUBLIC_FEED_LIST_CACHE_PREFIX);
+    await this.invalidateByPrefix(RANKED_FEED_LIST_CACHE_PREFIX);
+  }
+
+  private async invalidateByPrefix(prefix: string): Promise<void> {
+    const pattern = `${prefix}*`;
     let cursor = '0';
     do {
       const [nextCursor, keys] = await this.redis.scan(

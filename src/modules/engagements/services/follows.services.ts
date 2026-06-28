@@ -12,6 +12,7 @@ import { FeedFilterDto } from 'src/modules/feeds/dtos/feed-filter.dto';
 import { AccountActivityService } from 'src/modules/account-activity/account-activity.service';
 import { NotificationDispatcher } from 'src/modules/notification/notification.dispatcher';
 import { NotificationEventType } from 'src/modules/notification/interfaces/notification-event.types';
+import { FeedCacheInvalidationService } from 'src/modules/feeds/feed-cache-invalidation.service';
 
 @Injectable()
 export class FollowsService {
@@ -23,6 +24,7 @@ export class FollowsService {
     private readonly dataSource: DataSource,
     private readonly accountActivityService: AccountActivityService,
     private readonly notificationDispatcher: NotificationDispatcher,
+    private readonly feedCacheInvalidation: FeedCacheInvalidationService,
   ) {}
 
   async followUser(currentUserId: string, targetUserId: string) {
@@ -76,6 +78,8 @@ export class FollowsService {
           context: { actorUsername: follower?.username },
         });
 
+        await this.feedCacheInvalidation.invalidatePublicFeedListCaches();
+
         return successResponse('Successfully followed user');
       });
     } catch (error) {
@@ -108,6 +112,8 @@ export class FollowsService {
           action: 'user.unfollowed',
           metadata: { targetUserId },
         });
+
+        await this.feedCacheInvalidation.invalidatePublicFeedListCaches();
 
         return successResponse('Successfully unfollowed user');
       });

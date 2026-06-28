@@ -1,8 +1,8 @@
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LikesService } from './services/likes.services';
 import { Like } from './entities/like.entity';
 import { EngagementsController } from './engagement.controller';
-import { Module } from '@nestjs/common';
 import { CommentsService } from './services/comments.services';
 import { Comment } from './entities/comment.entity';
 import { Bookmark } from './entities/bookmark.entity';
@@ -11,6 +11,7 @@ import { Repost } from './entities/repost.entity';
 import { RepostsService } from './services/reposts.services';
 import { NotificationModule } from '../notification/notification.module';
 import { UserDisplayModule } from '../user/user-display.module';
+import { FeedModule } from '../feeds/feed.module';
 
 @Module({
   providers: [LikesService, CommentsService, BookmarksService, RepostsService],
@@ -19,6 +20,7 @@ import { UserDisplayModule } from '../user/user-display.module';
     TypeOrmModule.forFeature([Like, Comment, Bookmark, Repost]),
     NotificationModule,
     UserDisplayModule,
+    FeedModule,
   ],
 })
 export class EngagementsModule {}
