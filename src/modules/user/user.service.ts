@@ -12,7 +12,7 @@ import { User } from './entity/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { UserQueryFilterDto } from './dto/user-query-filter.dto';
-import { baseUsername } from 'src/common/utils/utilityFunctions';
+import { baseUsername, normalizeUsername } from 'src/common/utils/utilityFunctions';
 import { hash } from 'bcryptjs';
 import { customAlphabet } from 'nanoid';
 import { Follow } from 'src/modules/engagements/entities/follow.entity';
@@ -173,6 +173,10 @@ export class UserService {
 
   async update(updateUserDto: UpdateUserDto, userId: string) {
     try {
+      if (updateUserDto.username != null) {
+        updateUserDto.username = normalizeUsername(updateUserDto.username)!;
+      }
+
       const user = await this.userRepository.findOne({
         where: { id: userId },
       });
@@ -498,7 +502,9 @@ export class UserService {
 
   async verifyUsername(username: string) {
     try {
-      if (!username) {
+      const normalizedUsername = normalizeUsername(username);
+
+      if (!normalizedUsername) {
         throw new HttpException(
           {
             statusCode: HttpStatus.BAD_REQUEST,
@@ -509,7 +515,7 @@ export class UserService {
       }
 
       const existing = await this.userRepository.findOne({
-        where: { username },
+        where: { username: normalizedUsername },
       });
 
       return {

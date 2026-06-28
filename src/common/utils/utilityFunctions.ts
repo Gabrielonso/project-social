@@ -98,6 +98,11 @@ export function normalizeName(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+export function normalizeUsername(username?: string | null): string | undefined {
+  if (username == null) return undefined;
+  return username.trim().toLowerCase();
+}
+
 export function baseUsername(firstName: string, lastName: string) {
   const first = normalizeName(firstName).slice(0, 3);
   const last = normalizeName(lastName).slice(0, 3);

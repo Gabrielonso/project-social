@@ -7,6 +7,8 @@ import {
   Length,
   Matches,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { TransformUsernameToLowercase } from 'src/common/utils/transformers.util';
 import { UserStatusEnum } from '../interfaces/user.interfaces';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -23,14 +25,15 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional({
     description:
-      'Unique username. Allowed characters: letters, numbers, underscore. 3–30 characters.',
+      'Unique username. Stored in lowercase. Allowed characters: letters, numbers, underscore. 3–30 characters.',
     minLength: 3,
     maxLength: 30,
   })
   @IsString()
   @IsOptional()
+  @Transform(TransformUsernameToLowercase)
   @Length(3, 30)
-  @Matches(/^[a-zA-Z0-9_]+$/, {
+  @Matches(/^[a-z0-9_]+$/, {
     message: 'Username can only contain letters, numbers, and underscores',
   })
   username: string;
