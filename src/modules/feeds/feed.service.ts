@@ -8,15 +8,24 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FeedFilterDto } from './dtos/feed-filter.dto';
 import {
   CachedBaseEntity,
+  FeedReposterDto,
   FollowPairRow,
+  HydrateFeedOptions,
   LikeBookmarkRow,
+  PostCandidateRow,
   RawFeedRow,
+  RankedFeedCandidate,
+  ReposterRow,
   RepostRow,
+  RepostsByPostId,
+  SeenPostMap,
+  SeenPostRow,
   TagDto,
   TagRow,
 } from './types/feed.types';
 import { Ad } from 'src/modules/ads/entities/ads.entity';
 import { Post } from 'src/modules/posts/entities/post.entity';
+import { Follow } from 'src/modules/engagements/entities/follow.entity';
 import { FeedType } from './enums/feed-type.enum';
 import { REDIS_CLIENT } from 'src/common/redis/redis.constants';
 import Redis from 'ioredis';
@@ -24,6 +33,7 @@ import {
   feedBaseKey,
   feedTagsKey,
   publicFeedListCacheKey,
+  rankedFeedListCacheKey,
 } from './feed-cache.keys';
 import { UserDisplayService } from '../user/user-display.service';
 import {
@@ -35,6 +45,8 @@ import { UserDisplay } from '../user/types/user-display.types';
 import { MediaUrlResolver } from 'src/common/media/media-url.resolver';
 import { Media } from 'src/modules/media/entities/media.entity';
 import { PostMedia } from '../posts/entities/post-media.entity';
+import { FeedRankingService } from './feed-ranking.service';
+import { FEED_RANKING, FeedPoolSource } from './feed-ranking.config';
 
 @Injectable()
 export class FeedService {
@@ -47,9 +59,12 @@ export class FeedService {
     private postRepo: Repository<Post>,
     @InjectRepository(Ad)
     private adRepo: Repository<Ad>,
+    @InjectRepository(Follow)
+    private followRepo: Repository<Follow>,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     private readonly userDisplayService: UserDisplayService,
     private readonly mediaUrlResolver: MediaUrlResolver,
+    private readonly feedRankingService: FeedRankingService,
   ) {}
 
   private encodeCursor(input: { createdAt: string; id: string }) {
@@ -159,13 +174,280 @@ export class FeedService {
     );
   }
 
+  private async getFollowingIds(viewerId: string): Promise<string[]> {
+    const follows = await this.followRepo.find({
+      where: { followerId: viewerId },
+      select: ['followingId'],
+    });
+    return [...new Set(follows.map((f) => f.followingId))];
+  }
+
+  private async loadSeenPosts(
+    viewerId: string,
+    postIds: string[],
+  ): Promise<SeenPostMap> {
+    const map: SeenPostMap = new Map();
+    if (!postIds.length) return map;
+
+    const rows: SeenPostRow[] = await this.dataSource.query(
+      `
+      SELECT post_id, viewed_at
+      FROM post_views
+      WHERE viewer_id = $1 AND post_id = ANY($2)
+      `,
+      [viewerId, postIds],
+    );
+
+    for (const row of rows) {
+      map.set(row.post_id, row.viewed_at);
+    }
+    return map;
+  }
+
+  private async loadFollowedRepostsByPostId(
+    viewerId: string | undefined,
+    postIds: string[],
+    profileOwnerId?: string,
+  ): Promise<RepostsByPostId> {
+    const result: RepostsByPostId = new Map();
+    if (!postIds.length || (!viewerId && !profileOwnerId)) return result;
+
+    const followedRows: ReposterRow[] = viewerId
+      ? await this.dataSource.query(
+          `
+      SELECT r.post_id, r.user_id, r.created_at
+      FROM reposts r
+      INNER JOIN follows f
+        ON f.follower_id = $1 AND f.following_id = r.user_id
+      WHERE r.post_id = ANY($2)
+        AND r.created_at > NOW() - make_interval(days => $3)
+      ORDER BY r.created_at DESC
+      `,
+          [viewerId, postIds, FEED_RANKING.REPOST_MAX_AGE_DAYS],
+        )
+      : [];
+
+    let profileRows: ReposterRow[] = [];
+    if (profileOwnerId) {
+      profileRows = await this.dataSource.query(
+        `
+        SELECT r.post_id, r.user_id, r.created_at
+        FROM reposts r
+        WHERE r.post_id = ANY($1)
+          AND r.user_id = $2
+          AND r.created_at > NOW() - make_interval(days => $3)
+        ORDER BY r.created_at DESC
+        `,
+        [postIds, profileOwnerId, FEED_RANKING.REPOST_MAX_AGE_DAYS],
+      );
+    }
+
+    const grouped = new Map<string, ReposterRow[]>();
+    for (const row of [...followedRows, ...profileRows]) {
+      if (!grouped.has(row.post_id)) grouped.set(row.post_id, []);
+      const list = grouped.get(row.post_id)!;
+      if (!list.some((r) => r.user_id === row.user_id)) {
+        list.push(row);
+      }
+    }
+
+    const allUserIds = [
+      ...new Set(
+        [...grouped.values()].flatMap((rows) => rows.map((r) => r.user_id)),
+      ),
+    ];
+    const displayMap = await this.userDisplayService.getByIds(allUserIds);
+
+    for (const [postId, rows] of grouped) {
+      const sorted = rows.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      const reposters: FeedReposterDto[] = [];
+      for (const row of sorted) {
+        const display = resolveUserDisplay(displayMap, row.user_id);
+        if (display) {
+          reposters.push({
+            id: display.id,
+            username: display.username,
+            ...(display.profilePicture
+              ? { profilePicture: display.profilePicture }
+              : {}),
+          });
+        }
+      }
+      if (reposters.length) result.set(postId, reposters);
+    }
+
+    return result;
+  }
+
+  private toRankedCandidate(
+    row: PostCandidateRow,
+    pool: FeedPoolSource,
+  ): RankedFeedCandidate {
+    const type =
+      row.type === 'ad'
+        ? FeedType.AD
+        : row.type === 'repost'
+          ? 'repost'
+          : FeedType.POST;
+
+    return {
+      id: row.id,
+      type,
+      createdAt: row.createdAt,
+      pool,
+      ownerId: row.ownerId,
+      likeCount: row.likeCount,
+      commentCount: row.commentCount,
+      repostCount: row.repostCount,
+      viewCount: row.viewCount,
+      latestRepostAt: row.latestRepostAt,
+    };
+  }
+
+  private async fetchFollowingPostCandidates(
+    followingIds: string[],
+    overfetch: number,
+  ): Promise<RankedFeedCandidate[]> {
+    if (!followingIds.length) return [];
+
+    const rows: PostCandidateRow[] = await this.dataSource.query(
+      `
+      SELECT
+        p.id,
+        'post' AS type,
+        p.created_at AS "createdAt",
+        p.owner_id AS "ownerId",
+        p.like_count AS "likeCount",
+        p.comment_count AS "commentCount",
+        p.repost_count AS "repostCount",
+        p.view_count AS "viewCount"
+      FROM posts p
+      WHERE p.owner_id = ANY($1)
+        AND p.is_public = true
+        AND p.publish_status = 'published'
+      ORDER BY p.created_at DESC
+      LIMIT $2
+      `,
+      [followingIds, overfetch],
+    );
+
+    return rows.map((r) => this.toRankedCandidate(r, 'following'));
+  }
+
+  private async fetchDiscoveryPostCandidates(
+    viewerId: string,
+    followingIds: string[],
+    overfetch: number,
+  ): Promise<RankedFeedCandidate[]> {
+    const rows: PostCandidateRow[] = await this.dataSource.query(
+      `
+      SELECT
+        p.id,
+        'post' AS type,
+        p.created_at AS "createdAt",
+        p.owner_id AS "ownerId",
+        p.like_count AS "likeCount",
+        p.comment_count AS "commentCount",
+        p.repost_count AS "repostCount",
+        p.view_count AS "viewCount"
+      FROM posts p
+      WHERE p.is_public = true
+        AND p.publish_status = 'published'
+        AND (
+          p.owner_id = $1
+          OR cardinality($2::uuid[]) = 0
+          OR NOT (p.owner_id = ANY($2))
+        )
+      ORDER BY p.created_at DESC
+      LIMIT $3
+      `,
+      [viewerId, followingIds, overfetch],
+    );
+
+    return rows.map((r) => this.toRankedCandidate(r, 'discovery'));
+  }
+
+  private async fetchFollowedRepostCandidates(
+    viewerId: string,
+    overfetch: number,
+  ): Promise<RankedFeedCandidate[]> {
+    const rows: PostCandidateRow[] = await this.dataSource.query(
+      `
+      WITH followed_reposts AS (
+        SELECT
+          r.post_id,
+          r.user_id,
+          r.created_at,
+          MAX(r.created_at) OVER (PARTITION BY r.post_id) AS latest_repost_at,
+          p.owner_id,
+          p.like_count,
+          p.comment_count,
+          p.repost_count,
+          p.view_count
+        FROM reposts r
+        INNER JOIN follows f
+          ON f.follower_id = $1 AND f.following_id = r.user_id
+        INNER JOIN posts p ON p.id = r.post_id
+          AND p.is_public = true AND p.publish_status = 'published'
+        WHERE r.created_at > NOW() - make_interval(days => $3)
+      )
+      SELECT DISTINCT ON (post_id)
+        post_id AS id,
+        'repost' AS type,
+        latest_repost_at AS "createdAt",
+        latest_repost_at AS "latestRepostAt",
+        owner_id AS "ownerId",
+        like_count AS "likeCount",
+        comment_count AS "commentCount",
+        repost_count AS "repostCount",
+        view_count AS "viewCount"
+      FROM followed_reposts
+      ORDER BY post_id, created_at DESC
+      LIMIT $2
+      `,
+      [viewerId, overfetch, FEED_RANKING.REPOST_MAX_AGE_DAYS],
+    );
+
+    return rows.map((r) => this.toRankedCandidate(r, 'repost'));
+  }
+
+  private async fetchAdCandidates(
+    overfetch: number,
+  ): Promise<RankedFeedCandidate[]> {
+    const rows: PostCandidateRow[] = await this.dataSource.query(
+      `
+      SELECT
+        a.id,
+        'ad' AS type,
+        a.created_at AS "createdAt",
+        a.owner_id AS "ownerId"
+      FROM ads a
+      WHERE a.publish_status = 'published'
+      ORDER BY a.created_at DESC
+      LIMIT $1
+      `,
+      [overfetch],
+    );
+
+    return rows.map((r) => this.toRankedCandidate(r, 'ad'));
+  }
+
   async hydrateFeed(
     viewerId: string | undefined,
     rows: RawFeedRow[],
     page: number,
     limit: number,
     total: number,
+    options: HydrateFeedOptions = {},
   ) {
+    const {
+      repostsByPostId,
+      seenPostMap,
+      includeReposts = true,
+    } = options;
     const postIds = [
       ...new Set(
         rows
@@ -462,10 +744,11 @@ export class FeedService {
       }
     }
 
-    const reposterIds = rows
-      .filter((r) => r.type === 'repost')
-      .map((r) => r.repostedById)
-      .filter((id): id is string => !!id);
+    const reposterIds = includeReposts
+      ? [...(repostsByPostId?.values() ?? [])].flatMap((reposts) =>
+          reposts.map((r) => r.id),
+        )
+      : [];
 
     const displayMap = await this.userDisplayService.getByIds([
       ...this.collectFeedUserIds(posts, ads),
@@ -487,6 +770,9 @@ export class FeedService {
           ownerFollowsViewer: viewerId
             ? ownerFollowsViewer.has(p.ownerId || '')
             : false,
+          ...(viewerId && seenPostMap
+            ? { viewerHasSeen: seenPostMap.has(p.id) }
+            : {}),
         },
       ]),
     );
@@ -510,25 +796,35 @@ export class FeedService {
 
     // Rebuild ordered feed
     const feed = rows.map((row) => {
-      if (row.type === 'repost') {
+      if (row.type === FeedType.POST || row.type === 'repost') {
+        const postData = postMap.get(row.id);
+        const reposts =
+          includeReposts && repostsByPostId
+            ? (repostsByPostId.get(row.id) ?? []).slice(
+                0,
+                FEED_RANKING.REPOSTS_DISPLAY_CAP,
+              )
+            : [];
+
         return {
-          type: 'repost',
-          repostedBy: resolveUserDisplay(displayMap, row.repostedById),
-          repostedAt: row.createdAt,
-          data: postMap.get(row.id),
+          type: 'post',
+          data: {
+            ...postData,
+            ...(includeReposts ? { reposts } : {}),
+          },
         };
       }
 
-      if (row.type === FeedType.POST) {
+      if (row.type === FeedType.AD) {
         return {
-          type: 'post',
-          data: postMap.get(row.id),
+          type: 'ad',
+          data: adMap.get(row.id),
         };
       }
 
       return {
-        type: 'ad',
-        data: adMap.get(row.id),
+        type: 'post',
+        data: postMap.get(row.id),
       };
     });
 
@@ -539,12 +835,19 @@ export class FeedService {
     });
   }
 
-  async getFeed(userId: string, feedFilterDto: FeedFilterDto) {
+  async getFeed(userId: string | undefined, feedFilterDto: FeedFilterDto) {
+    if (!userId) {
+      return this.getChronologicalFeed(userId, feedFilterDto);
+    }
+    return this.getRankedFeed(userId, feedFilterDto);
+  }
+
+  private async getChronologicalFeed(
+    userId: string | undefined,
+    feedFilterDto: FeedFilterDto,
+  ) {
     const limit = Math.min(50, Number(feedFilterDto.limit) || 20);
-
-    // Prefer cursor pagination at scale (no OFFSET scan).
     const decoded = this.decodeCursor(feedFilterDto.cursor);
-
     const cursorCreatedAt = decoded?.createdAt;
     const cursorId = decoded?.id;
 
@@ -555,7 +858,6 @@ export class FeedService {
     });
 
     const cached = await this.redis.get(cacheKey);
-
     if (cached) {
       try {
         return JSON.parse(cached) as ApiResponse<unknown>;
@@ -563,6 +865,7 @@ export class FeedService {
         // ignore cache parse errors
       }
     }
+
     const rows: RawFeedRow[] = await this.dataSource.query(
       `
       (
@@ -601,12 +904,12 @@ export class FeedService {
       [limit, cursorCreatedAt || null, cursorId || null],
     );
 
-    // Backwards compatible shape: keep currentPage/totalPages, but avoid COUNT() at scale.
-    // We return a "best effort" totalPages=1 and encourage cursor use.
     const page = Number(feedFilterDto.page) || 1;
-    const total = limit; // placeholder; avoids expensive COUNT() on hot path
+    const total = limit;
 
-    const response = await this.hydrateFeed(userId, rows, page, limit, total);
+    const response = await this.hydrateFeed(userId, rows, page, limit, total, {
+      includeReposts: false,
+    });
     const responseData = (response.data ?? {}) as Record<string, unknown>;
 
     const last = rows[rows.length - 1];
@@ -624,6 +927,111 @@ export class FeedService {
         ...responseData,
         nextCursor,
         hasMore: rows.length === limit,
+      },
+    };
+
+    await this.redis.set(cacheKey, JSON.stringify(withCursor), 'EX', 10);
+    return withCursor;
+  }
+
+  private async getRankedFeed(userId: string, feedFilterDto: FeedFilterDto) {
+    const limit = Math.min(50, Number(feedFilterDto.limit) || 20);
+    const decodedCursor = this.feedRankingService.decodeRankedCursor(
+      feedFilterDto.cursor,
+    );
+    const seed = this.feedRankingService.generateSeed(
+      decodedCursor?.seed ?? feedFilterDto.seed,
+    );
+
+    const cacheKey = rankedFeedListCacheKey({
+      viewerId: userId,
+      limit,
+      cursorToken: feedFilterDto.cursor || 'first',
+      seed,
+    });
+
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached) as ApiResponse<unknown>;
+      } catch {
+        // ignore cache parse errors
+      }
+    }
+
+    const overfetch = limit * FEED_RANKING.OVERFETCH_MULTIPLIER;
+    const followingIds = await this.getFollowingIds(userId);
+
+    const [followingRaw, discoveryRaw, repostRaw, adRaw] = await Promise.all([
+      this.fetchFollowingPostCandidates(followingIds, overfetch),
+      this.fetchDiscoveryPostCandidates(userId, followingIds, overfetch),
+      this.fetchFollowedRepostCandidates(userId, overfetch),
+      this.fetchAdCandidates(overfetch),
+    ]);
+
+    const allPostIds = [
+      ...new Set(
+        [...followingRaw, ...discoveryRaw, ...repostRaw].map((c) => c.id),
+      ),
+    ];
+    const seenMap = await this.loadSeenPosts(userId, allPostIds);
+
+    const scoreCtx = {
+      followingIds: new Set(followingIds),
+      seenMap,
+      viewerId: userId,
+    };
+
+    const pools = {
+      following: this.feedRankingService.rankPool(followingRaw, scoreCtx, seed),
+      discovery: this.feedRankingService.rankPool(discoveryRaw, scoreCtx, seed),
+      repost: this.feedRankingService.rankPool(repostRaw, scoreCtx, seed),
+      ad: this.feedRankingService.rankPool(adRaw, scoreCtx, seed),
+    };
+
+    const merged = this.feedRankingService.mergeBySlots(
+      pools,
+      limit,
+      decodedCursor,
+    );
+    const rows = this.feedRankingService.toRawFeedRows(merged);
+
+    const postIds = rows
+      .filter((r) => r.type === FeedType.POST || r.type === 'repost')
+      .map((r) => r.id);
+
+    const [repostsByPostId, seenPostMap] = await Promise.all([
+      this.loadFollowedRepostsByPostId(userId, postIds),
+      Promise.resolve(seenMap),
+    ]);
+
+    const page = Number(feedFilterDto.page) || 1;
+    const total = limit;
+
+    const response = await this.hydrateFeed(userId, rows, page, limit, total, {
+      repostsByPostId,
+      seenPostMap,
+      includeReposts: true,
+    });
+
+    const responseData = (response.data ?? {}) as Record<string, unknown>;
+    const last = merged[merged.length - 1];
+    const nextCursor =
+      last?.finalScore != null
+        ? this.feedRankingService.encodeRankedCursor({
+            score: last.finalScore,
+            id: last.id,
+            seed,
+          })
+        : null;
+
+    const withCursor: ApiResponse<unknown> = {
+      ...response,
+      data: {
+        ...responseData,
+        nextCursor,
+        hasMore: merged.length === limit,
+        seed,
       },
     };
 
@@ -671,7 +1079,19 @@ export class FeedService {
     );
 
     const total = Number(totalRows[0]?.count || 0);
-    return this.hydrateFeed(userId, rows, page, limit, total);
+
+    const postIds = rows
+      .filter((r) => r.type === FeedType.POST || r.type === 'repost')
+      .map((r) => r.id);
+    const repostsByPostId = await this.loadFollowedRepostsByPostId(
+      userId,
+      postIds,
+    );
+
+    return this.hydrateFeed(userId, rows, page, limit, total, {
+      repostsByPostId,
+      includeReposts: true,
+    });
   }
 
   async getPresence(userId: string, feedFilterDto: FeedFilterDto) {
@@ -706,9 +1126,9 @@ export class FeedService {
       (
         SELECT
           r.post_id AS id,
-          'repost' AS type,
+          'post' AS type,
           r.created_at AS "createdAt",
-          r.user_id AS "repostedById"
+          NULL::uuid AS "repostedById"
         FROM reposts r
         WHERE r.user_id = $3
       )
@@ -742,7 +1162,7 @@ export class FeedService {
       (
         SELECT
           r.post_id AS id,
-          'repost' AS type,
+          'post' AS type,
           r.created_at AS "createdAt"
         FROM reposts r
         WHERE r.user_id = $1
@@ -752,7 +1172,9 @@ export class FeedService {
     );
 
     const total = Number(totalRows[0]?.count || 0);
-    return this.hydrateFeed(userId, rows, page, limit, total);
+    return this.hydrateFeed(userId, rows, page, limit, total, {
+      includeReposts: false,
+    });
   }
 
   async getUsersFeed(
@@ -791,7 +1213,7 @@ export class FeedService {
       (
         SELECT
           r.post_id AS id,
-          'repost' AS type,
+          'post' AS type,
           r.created_at AS "createdAt",
           r.user_id AS "repostedById"
         FROM reposts r
@@ -825,7 +1247,20 @@ export class FeedService {
     );
 
     const total = Number(totalRows[0]?.count || 0);
-    return this.hydrateFeed(authUserId, rows, page, limit, total);
+
+    const postIds = rows
+      .filter((r) => r.type === FeedType.POST || r.type === 'repost')
+      .map((r) => r.id);
+    const repostsByPostId = await this.loadFollowedRepostsByPostId(
+      authUserId,
+      postIds,
+      userId,
+    );
+
+    return this.hydrateFeed(authUserId, rows, page, limit, total, {
+      repostsByPostId,
+      includeReposts: true,
+    });
   }
 
   async getMyTaggedFeed(userId: string, feedFilterDto: FeedFilterDto) {

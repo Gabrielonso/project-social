@@ -10,6 +10,7 @@ import { successResponse } from 'src/common/helpers/response.helper';
 import { NotificationDispatcher } from 'src/modules/notification/notification.dispatcher';
 import { User } from 'src/modules/user/entity/user.entity';
 import { UserDisplayService } from 'src/modules/user/user-display.service';
+import { FeedCacheInvalidationService } from 'src/modules/feeds/feed-cache-invalidation.service';
 
 @Injectable()
 export class RepostsService {
@@ -19,6 +20,7 @@ export class RepostsService {
     private readonly dataSource: DataSource,
     private readonly notificationDispatcher: NotificationDispatcher,
     private readonly userDisplayService: UserDisplayService,
+    private readonly feedCacheInvalidation: FeedCacheInvalidationService,
   ) {}
 
   async toggleRepost(postId: string, userId: string) {
@@ -50,6 +52,8 @@ export class RepostsService {
         reposted = true;
         message = 'Successfully reposted post';
       }
+
+      await this.feedCacheInvalidation.invalidatePublicFeedListCaches();
 
       return successResponse(message, { reposted });
     });

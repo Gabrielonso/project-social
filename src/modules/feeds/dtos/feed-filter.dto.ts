@@ -107,6 +107,17 @@ export class FeedFilterDto {
   @IsString()
   cursor?: string;
 
+  @ApiPropertyOptional({
+    required: false,
+    type: String,
+    description:
+      'Session seed for stable ranked feed order. Returned on first response; pass back with cursor on subsequent pages.',
+    example: 'a1b2c3d4e5f6789012345678abcdef01',
+  })
+  @IsOptional()
+  @IsString()
+  seed?: string;
+
   // @IsOptional()
   // @IsString()
   // search?: string;
