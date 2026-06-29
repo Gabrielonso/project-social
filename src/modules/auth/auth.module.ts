@@ -7,12 +7,11 @@ import tiktokOauthConfig from '../../config/tiktok-oauth.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/modules/user/entity/user.entity';
 import { JwtModule } from '@nestjs/jwt';
-import { UserService } from 'src/modules/user/user.service';
 import { LocalStrategy } from 'src/common/strategies/local.strategy';
 import { GoogleStrategy } from 'src/common/strategies/google.strategy';
 import { JwtStrategy } from 'src/common/strategies/jwt.strategy';
 import { AccountActivityModule } from '../account-activity/account-activity.module';
-import { UserDisplayService } from '../user/user-display.service';
+import { UserModule } from '../user/user.module';
 
 @Module({
   providers: [
@@ -20,8 +19,6 @@ import { UserDisplayService } from '../user/user-display.service';
     LocalStrategy,
     GoogleStrategy,
     JwtStrategy,
-    UserService,
-    UserDisplayService,
   ],
   controllers: [AuthController],
   imports: [
@@ -30,6 +27,7 @@ import { UserDisplayService } from '../user/user-display.service';
     TypeOrmModule.forFeature([User]),
     JwtModule.register({}),
     AccountActivityModule,
+    UserModule,
   ],
 })
 export class AuthModule {}

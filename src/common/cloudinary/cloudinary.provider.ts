@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { cloudinary } from 'src/config/cloudinary.config';
+import { CloudinaryCleanupService } from './cloudinary-cleanup.service';
 import {
   GenerateUploadInput,
   IMediaStorageProvider,
@@ -15,6 +16,10 @@ import { MediaType } from 'src/modules/media/enums/media-type.enum';
 @Injectable()
 export class CloudinaryProvider implements IMediaStorageProvider {
   readonly provider = MediaProvider.CLOUDINARY;
+
+  constructor(
+    private readonly cloudinaryCleanup: CloudinaryCleanupService,
+  ) {}
 
   async generateUploadCredentials(
     input: GenerateUploadInput,
@@ -80,14 +85,14 @@ export class CloudinaryProvider implements IMediaStorageProvider {
   }
 
   async deleteMediaSnapshot(snapshot: MediaDeleteSnapshot): Promise<void> {
-    const resourceType =
-      snapshot.type === MediaType.VIDEO || snapshot.type === MediaType.AUDIO
-        ? 'video'
-        : 'image';
-
-    await cloudinary.uploader.destroy(snapshot.sourceIdOrKey, {
-      resource_type: resourceType,
-      invalidate: true,
+    await this.cloudinaryCleanup.deleteAsset({
+      sourceIdOrKey: snapshot.sourceIdOrKey,
+      originalUrl: snapshot.originalUrl,
+      type: snapshot.type,
     });
+  }
+
+  async deleteByDeliveryUrl(url: string): Promise<void> {
+    await this.cloudinaryCleanup.deleteDeliveryUrl(url);
   }
 }

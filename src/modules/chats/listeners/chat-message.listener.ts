@@ -266,10 +266,10 @@ export class ChatMessageListener {
         throw new Error('UNAUTHORIZED');
       }
 
-      message.deleted = true;
-      message.text = null;
-
-      await this.chatService.saveMessage(message);
+      await this.chatService.deleteMessageForEveryone(
+        payload.messageId,
+        payload.userId,
+      );
 
       const participants = await this.chatService.getChatParticipants(
         message.chatId,

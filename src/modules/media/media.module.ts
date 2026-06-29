@@ -5,6 +5,7 @@ import { MEDIA_PROVIDER } from 'src/common/constants';
 import { MediaService } from './media.service';
 import { S3Provider } from 'src/common/s3/s3.provider';
 import { CloudinaryProvider } from 'src/common/cloudinary/cloudinary.provider';
+import { CloudinaryCleanupService } from 'src/common/cloudinary/cloudinary-cleanup.service';
 import { MediaController } from './media.controller';
 import { Media } from './entities/media.entity';
 import { MediaStorageRegistry } from 'src/common/media/media-storage.registry';
@@ -69,6 +70,7 @@ import { MediaCancelProcessor } from './processors/media-cancel.processor';
   ],
   providers: [
     S3Provider,
+    CloudinaryCleanupService,
     CloudinaryProvider,
     MediaStorageRegistry,
     MediaUrlResolver,
@@ -97,6 +99,7 @@ import { MediaCancelProcessor } from './processors/media-cancel.processor';
     MediaAttachValidator,
     MediaUsageService,
     MediaDeletionService,
+    CloudinaryCleanupService,
     MediaService,
     ContentPublishService,
   ],

@@ -4,6 +4,7 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  NotFoundException,
   forwardRef,
   BadRequestException,
 } from '@nestjs/common';
@@ -28,6 +29,7 @@ import { Media } from '../media/entities/media.entity';
 import { MessageKind } from './enums/message-kind.enum';
 import { UserDisplayService } from '../user/user-display.service';
 import { MediaAttachValidator } from '../media/media-attach.validator';
+import { MediaDeletionService } from '../media/media-deletion.service';
 
 @Injectable()
 export class ChatsService {
@@ -45,6 +47,7 @@ export class ChatsService {
     private chatRepo: Repository<Chat>,
     private readonly userDisplayService: UserDisplayService,
     private readonly mediaAttachValidator: MediaAttachValidator,
+    private readonly mediaDeletionService: MediaDeletionService,
   ) {}
 
   generateChatKey(user1: string, user2: string) {
@@ -591,20 +594,54 @@ export class ChatsService {
 
   async getMessageById(messageId: string): Promise<ChatMessage | null> {
     try {
-      return await this.dataSource.manager.transaction(
-        async (entityManager) => {
-          const chatMessageRepo = entityManager.getRepository(ChatMessage);
-
-          const message = chatMessageRepo.findOne({
-            where: { id: messageId },
-          });
-
-          return message;
-        },
-      );
+      return await this.chatMessageRepo.findOne({
+        where: { id: messageId },
+        relations: { attachments: { attachment: true } },
+      });
     } catch (error) {
       throw error;
     }
+  }
+
+  async deleteMessageForEveryone(messageId: string, userId: string) {
+    let mediaIdsToCleanup: string[] = [];
+
+    await this.dataSource.manager.transaction(async (entityManager) => {
+      const chatMessageRepo = entityManager.getRepository(ChatMessage);
+      const messageAttachmentRepo =
+        entityManager.getRepository(MessageAttachment);
+
+      const message = await chatMessageRepo.findOne({
+        where: { id: messageId },
+        relations: { attachments: { attachment: true } },
+      });
+
+      if (!message) {
+        throw new NotFoundException('Message not found');
+      }
+
+      if (message.senderId !== userId) {
+        throw new ForbiddenException('You are not allowed to delete this message');
+      }
+
+      mediaIdsToCleanup = (message.attachments ?? [])
+        .map((attachment) => attachment.attachment?.id)
+        .filter((id): id is string => !!id);
+
+      message.deleted = true;
+      message.text = null;
+      await chatMessageRepo.save(message);
+
+      if (mediaIdsToCleanup.length > 0) {
+        await messageAttachmentRepo.delete({ messageId: message.id });
+      }
+    });
+
+    if (mediaIdsToCleanup.length > 0) {
+      await this.mediaDeletionService.deleteOrphanMedias(mediaIdsToCleanup);
+    }
+
+    return messageId;
   }
 
   async saveMessage(message: ChatMessage) {

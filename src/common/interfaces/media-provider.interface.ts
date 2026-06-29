@@ -7,6 +7,7 @@ import { MediaUploadFolder } from 'src/modules/media/enums/media-upload-folder.e
 export interface MediaDeleteSnapshot {
   provider: MediaProviderType;
   sourceIdOrKey: string;
+  originalUrl?: string | null;
   variants?: Record<string, string>;
   type: MediaType;
 }
@@ -50,6 +51,8 @@ export interface IMediaStorageProvider {
   objectExists?(key: string): Promise<boolean>;
 
   deleteMediaSnapshot?(snapshot: MediaDeleteSnapshot): Promise<void>;
+
+  deleteByDeliveryUrl?(url: string): Promise<void>;
 }
 
 export interface CreateUploadSessionResult {

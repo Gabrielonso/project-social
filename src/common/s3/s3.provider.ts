@@ -14,6 +14,7 @@ import { MediaProvider } from 'src/modules/media/enums/media-provider.enum';
 import { MediaStatus } from 'src/modules/media/enums/media-status.enum';
 import { MediaType } from 'src/modules/media/enums/media-type.enum';
 import { awsConfig } from 'src/config/aws.config';
+import { extractS3ObjectKey } from './s3-url.util';
 
 const PRESIGNED_EXPIRY_SECONDS = 1800;
 
@@ -220,5 +221,20 @@ export class S3Provider implements IMediaStorageProvider {
     }
 
     await this.deleteKeys(keys);
+  }
+
+  async deleteByDeliveryUrl(url: string): Promise<void> {
+    const key = extractS3ObjectKey(url);
+    if (!key) {
+      return;
+    }
+
+    const snapshot: MediaDeleteSnapshot = {
+      provider: MediaProvider.S3,
+      sourceIdOrKey: key,
+      type: MediaType.IMAGE,
+    };
+
+    await this.deleteMediaSnapshot(snapshot);
   }
 }
