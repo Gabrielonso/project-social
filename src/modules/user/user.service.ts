@@ -2,6 +2,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { successResponse } from 'src/common/helpers/response.helper';
@@ -22,9 +23,12 @@ import { UserRoles } from 'src/common/enums/user-roles.constants';
 import { UserSocialPresenceDto } from './dto/user-social-presence.dto';
 import { AccountActivityService } from '../account-activity/account-activity.service';
 import { UserDisplayService } from './user-display.service';
+import { MediaDeletionService } from '../media/media-deletion.service';
+import { formatUnknownError } from 'src/common/utils/error.util';
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name);
   private nanoid: any;
   constructor(
     @InjectRepository(User)
@@ -32,6 +36,7 @@ export class UserService {
     private readonly dataSource: DataSource,
     private readonly accountActivityService: AccountActivityService,
     private readonly userDisplayService: UserDisplayService,
+    private readonly mediaDeletionService: MediaDeletionService,
   ) {
     const alphabet = '0123456789';
     this.nanoid = customAlphabet(alphabet, 16);
@@ -260,6 +265,10 @@ export class UserService {
         await this.userDisplayService.invalidate(userId);
       }
 
+      if (profilePictureChanged && user.profilePicture) {
+        await this.cleanupProfilePicture(user.profilePicture);
+      }
+
       return {
         statusCode: HttpStatus.OK,
         message: 'Successfully updated user',
@@ -391,7 +400,11 @@ export class UserService {
   }
 
   async deleteUserAccount(id: string) {
-    // await this.userRepository.delete(id);
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (user?.profilePicture) {
+      await this.cleanupProfilePicture(user.profilePicture);
+    }
+
     await this.userRepository.softDelete({ id });
     return {
       statusCode: HttpStatus.OK,
@@ -401,6 +414,18 @@ export class UserService {
 
   private hashPassword(password: string) {
     return hash(password, 10);
+  }
+
+  private async cleanupProfilePicture(profilePictureUrl: string): Promise<void> {
+    try {
+      await this.mediaDeletionService.deleteOrphanDeliveryUrl(
+        profilePictureUrl,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Failed to delete old profile picture (${profilePictureUrl}): ${formatUnknownError(err)}`,
+      );
+    }
   }
 
   async updateUserStatus(
@@ -444,6 +469,10 @@ export class UserService {
 
     if (user.deletedAt) {
       throw new NotFoundException('User account already deleted');
+    }
+
+    if (user.profilePicture) {
+      await this.cleanupProfilePicture(user.profilePicture);
     }
 
     await this.userRepository.update(
